@@ -2,3 +2,4 @@
 *.db
 bin/
 cmd/phumpkin/assets.go
+NOTES.md
