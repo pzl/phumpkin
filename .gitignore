@@ -1,2 +1,4 @@
 *.sw[op]
 *.db
+bin/
+cmd/phumpkin/assets.go
