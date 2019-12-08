@@ -36,9 +36,9 @@ export default {
   */
   buildModules: [
     // Doc: https://github.com/nuxt-community/eslint-module
-    '@nuxtjs/eslint-module',
+    //'@nuxtjs/eslint-module',
     // Doc: https://github.com/nuxt-community/stylelint-module
-    '@nuxtjs/stylelint-module',
+    //'@nuxtjs/stylelint-module',
     '@nuxtjs/vuetify'
   ],
   /*
@@ -62,7 +62,7 @@ export default {
   vuetify: {
     customVariables: ['~/assets/variables.scss'],
     theme: {
-      dark: true,
+      //dark: true,
       themes: {
         dark: {
           primary: colors.blue.darken2,
