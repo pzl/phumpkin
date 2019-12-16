@@ -26,9 +26,21 @@ func (s *server) routes() {
 
 	s.router.Route("/api/v1", func(v1 chi.Router) {
 		v1.Use(mstk.APIVer(1))
+		v1.Mount("/photos", s.Photos())
+		v1.Get("/thumb/{size}/*", s.PhotoHandler.GetThumb)
+
 	})
 
 	s.router.Get("/*", func(w http.ResponseWriter, r *http.Request) {
 		s.assets.ServeHTTP(w, r)
 	})
+}
+
+func (s *server) Photos() http.Handler {
+	r := chi.NewRouter()
+
+	r.Get("/", s.PhotoHandler.List)
+	r.Get("/*", s.PhotoHandler.Get)
+
+	return r
 }
