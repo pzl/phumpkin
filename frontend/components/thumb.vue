@@ -32,10 +32,7 @@
 							</template>
 							{{ image.location.lat }}, {{ image.location.lon }}
 						</v-tooltip>
-						<div class="tags">
-							<v-icon dark x-small>mdi-tag</v-icon>
-							<v-chip v-for="(t,i) in image.tags" :key="i" x-small dark>{{ t }}</v-chip>
-						</div>
+						<tags :dark="true" :tags="image.tags" />
 						<v-spacer />
 						<v-btn icon dark small>
 							<v-icon>mdi-download</v-icon>
@@ -52,6 +49,7 @@
 
 <script>
 import Rating from '~/components/rating'
+import Tags from '~/components/tags'
 import { mapState, mapMutations, mapActions } from 'vuex'
 
 export default {
@@ -92,7 +90,7 @@ export default {
 		},
 		...mapMutations('images', ['rate']),
 	},
-	components: { Rating },
+	components: { Rating, Tags },
 }
 </script>
 

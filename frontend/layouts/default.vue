@@ -23,9 +23,24 @@
 					</v-list-item>
 				</v-list-item-group>
 			</v-list>
+
+			<template v-slot:append>
+				<v-card outlined v-if="selected.length === 1" class="ma-2 mb-5">
+					<v-card-title>{{selected_image.name}}</v-card-title>
+					<v-card-subtitle><rating :readonly="true" :value="selected_image.rating" /></v-card-subtitle>
+
+					<v-card-text>{{selected_image.url}}</v-card-text>
+						
+					<v-card-text v-if="selected_image.location"><v-icon small>mdi-map-marker</v-icon> {{ selected_image.location.lat }}, {{ selected_image.location.lon }}</v-card-text>
+					<v-card-text>
+						<tags :dark="false" :tags="selected_image.tags" />
+					</v-card-text>
+				</v-card>
+			</template>
 		</v-navigation-drawer>
 
 
+		<!--
 		<v-navigation-drawer app :clipped="!navCollapsed" :mini-variant.sync="toolbar_shrunk" expand-on-hover right v-model="toolbar_vis">
 			<v-list-item>
 				<v-list-item-icon>
@@ -50,6 +65,7 @@
 				</v-list-item-group>
 			</v-list>
 		</v-navigation-drawer>
+	-->
 
 		<v-app-bar app dense :collapse-on-scroll="!anySelected" :color="anySelected ? 'primary' : ''" :dark="anySelected" :clipped-right="!navCollapsed">
 			<v-app-bar-nav-icon @click.stop="nav_vis = !nav_vis" />
@@ -63,10 +79,10 @@
 					<v-btn icon>
 						<v-icon>mdi-information</v-icon>
 					</v-btn>
-					<v-btn icon>
-						<v-icon>mdi-eye</v-icon>
-					</v-btn>
 				</template>
+				<v-btn icon>
+					<v-icon>mdi-eye</v-icon>
+				</v-btn>
 				<v-btn icon>
 					<v-icon>mdi-download</v-icon>
 				</v-btn>
@@ -120,13 +136,9 @@
 			<v-btn icon title="Filter">
 				<v-icon>mdi-filter</v-icon>
 			</v-btn>
-			<!--
-			<v-btn icon title="Search" v-if="!show_search" @click="show_search = true">
-				<v-icon>mdi-magnify</v-icon>
-			</v-btn>
-			-->
-			<div class="mb-n7">
-				<v-text-field rounded single-line clearable dense solo filled prepend-icon="mdi-magnify" :style="{ width: (show_search ? 100 : 0)+'%' }" @click:prepend="show_search = true">
+
+			<div class="mb-n7 search-hider" :class="{ collapsed: !show_search }" >
+				<v-text-field rounded single-line clearable dense solo filled prepend-icon="mdi-magnify" @click:prepend="show_search = !show_search">
 					<template v-slot:label>
 						Find images <v-icon style="vertical-align: middle;">mdi-magnify</v-icon>
 					</template>
@@ -158,6 +170,8 @@
 
 <script>
 import scrollUp from '~/components/scrollUp'
+import Rating from '~/components/rating'
+import Tags from '~/components/tags'
 import { mapState, mapMutations, mapActions } from 'vuex'
 
 export default {
@@ -199,7 +213,13 @@ export default {
 	computed: {
 		anySelected() { return !!this.$store.state.images.selected.length },
 		navCollapsed() { return this.scrolled && !this.anySelected },
-		...mapState('images', ['selected'])
+		selected_image() {
+			if (this.selected.length === 1) {
+				return this.images[this.selected[0]]
+			}
+			return null
+		},
+		...mapState('images', ['images','selected']),
 	},
 	methods: {
 		onScroll() {
@@ -218,10 +238,19 @@ export default {
 			this.$vuetify.theme.dark = val
 		}
 	},
-	components: { scrollUp }
+	components: { scrollUp, Rating, Tags }
 }
 </script>
 
 
 <style>
+
+.search-hider.collapsed {
+	width: 2%;
+}
+
+.search-hider.collapsed .v-input__slot {
+	padding: 0;
+}
+
 </style>
