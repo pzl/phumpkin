@@ -1,17 +1,15 @@
+import Vue from 'vue'
+
 export const state = () => ({
-	images: [...Array(50).keys()].map(i => {
-		return {
-			name: `IMG_00${i+1 < 10 ? '0'+(i+1) : i+1}.JPG`,
-			url: `http://picsum.photos/300/200?random=${i}`,
-			rating: Math.floor(Math.random() * 7)-1, // -1 -> 5
-			tags: ["Nature", "Door", "Switzerland", "People", "Animal"].filter(t => Math.random() > 0.65),
-			location: Math.random() > 0.8 ? { lat: "42,58.824683N", lon: "78,51.318550W" } : null,
-		}
-	}),
-	selected: []
+	images:[],
+	selected: [],
+	loading: false,
 })
 
 export const mutations = {
+	startLoading (state) { state.loading = true },
+	stopLoading (state) { state.loading = false },
+	setImages(state, images) { state.images = images },
 	clearSelection (state) { state.selected = [] },
 	select (state, image) { state.selected.push(image) },
 	unselect (state, image) {
@@ -27,6 +25,19 @@ export const mutations = {
 }
 
 export const actions = {
+	async loadImages({ commit }) {
+		commit('startLoading')
+		try {
+			const response = await this.$axios.$get("http://localhost:6001/api/v1/photos")
+			commit('setImages', response.photos)
+			commit('clearSelection')
+		} catch (error) {
+			// oh no
+			console.log("error: ")
+			console.log(error)
+		}
+		commit('stopLoading')
+	},
 	toggleSelect({ commit, state }, image) {
 		if (state.selected.includes(image)) {
 			commit('unselect', image)

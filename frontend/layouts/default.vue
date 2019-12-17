@@ -29,9 +29,11 @@
 					<v-card-title>{{selected_image.name}}</v-card-title>
 					<v-card-subtitle><rating :readonly="true" :value="selected_image.rating" /></v-card-subtitle>
 
+					<v-card-text>{{ sizeof(selected_image.size) }}</v-card-text>
+
 					<v-card-text>{{selected_image.url}}</v-card-text>
 						
-					<v-card-text v-if="selected_image.location"><v-icon small>mdi-map-marker</v-icon> {{ selected_image.location.lat }}, {{ selected_image.location.lon }}</v-card-text>
+					<v-card-text v-if="selected_image.loc"><v-icon small>mdi-map-marker</v-icon> {{ selected_image.loc.lat }}, {{ selected_image.loc.lon }}</v-card-text>
 					<v-card-text>
 						<tags :dark="false" :tags="selected_image.tags" />
 					</v-card-text>
@@ -229,6 +231,16 @@ export default {
 
 			const top = ( window.pageYOffset || document.documentElement.offsetTop || 0)
 			this.scrolled = top > 0
+		},
+		sizeof(b) {
+			const units = ["b","KB","MB","GB","TB"]
+			let unit = 0
+
+			while (b > 1024) {
+				b = b/1024
+				unit++
+			}
+			return b.toFixed(2)+" "+units[unit]
 		},
 		...mapMutations('images', ['clearSelection']),
 		...mapActions('interface', ['setViewAs']),

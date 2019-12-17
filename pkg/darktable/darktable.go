@@ -35,7 +35,7 @@ func New() *Exporter {
 	return &Exporter{
 		ctx:  context.Background(),
 		q:    make([]Job, 0, 50),
-		next: make(chan Job, 300),
+		next: make(chan Job, 600),
 	}
 }
 

@@ -19,7 +19,7 @@ export default {
 		}
 	},
 	computed: {
-		...mapState('images', ['images', 'selected']),
+		...mapState('images', ['images', 'selected', 'loading']),
 		...mapState('interface', ['view_size', 'view_dense'])
 	},
 	methods: {
@@ -56,9 +56,10 @@ export default {
 			}
 		},
 		...mapMutations('images', ['clearSelection']),
-		...mapMutations('interface', ['setViewSize', 'setViewDensity']),
-		...mapActions('images', ['toggleSelect', 'setSelection', 'addSelection']),
-		...mapActions('interface',['setViewAs'])
+		...mapActions('images', ['toggleSelect', 'setSelection', 'addSelection', 'loadImages']),
+	},
+	mounted() {
+		this.loadImages()
 	},
 	components: { Thumb }
 }
