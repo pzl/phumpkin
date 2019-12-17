@@ -202,7 +202,7 @@ func (ph *PhotoHandler) GetThumb(w http.ResponseWriter, r *http.Request) {
 	if os.IsNotExist(err) || lastMod.After(fi.ModTime()) {
 		l.Debug("generating thumb on the fly")
 
-		job, err := ph.darktable.Immediate(src, xmp, thumbpath, Px(size))
+		job, err := ph.darktable.Immediate(src, thumbpath, Px(size), darktable.SetXMP(xmp))
 		if err != nil {
 			l.WithError(err).Error("error starting job")
 			http.Error(w, err.Error(), http.StatusInternalServerError)

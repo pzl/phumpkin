@@ -18,9 +18,15 @@ type Job struct {
 	priority int
 	size     int
 	source   string
-	xmp      *string
+	xmp      string
 	dest     string
+	hq       bool // considerable time difference, with quality change mostly in fine sharpness
 }
+
+type JobOpt func(*Job)
+
+func SetHQ(hq bool) JobOpt     { return func(j *Job) { j.hq = hq } }
+func SetXMP(xmp string) JobOpt { return func(j *Job) { j.xmp = xmp } }
 
 type Exporter struct {
 	ctx  context.Context
@@ -53,10 +59,10 @@ func (e *Exporter) Add() error {
 
 // force immediate generation of request, skipping queue
 // returns Done channel
-func (e *Exporter) Immediate(src string, xmp string, dest string, px int) (Job, error) {
+func (e *Exporter) Immediate(src string, dest string, px int, opts ...JobOpt) (Job, error) {
 	l := e.Log.WithFields(logrus.Fields{
 		"src":  src,
-		"xmp":  xmp,
+		"opts": opts,
 		"dest": dest,
 		"px":   px,
 	})
@@ -72,9 +78,13 @@ func (e *Exporter) Immediate(src string, xmp string, dest string, px int) (Job, 
 		size:     px,
 		source:   src,
 		dest:     dest,
+		xmp:      "",
+		hq:       false,
 	}
-	if xmp != "" {
-		j.xmp = &xmp
+	for _, o := range opts {
+		if o != nil {
+			o(&j)
+		}
 	}
 
 	e.next <- j
@@ -121,11 +131,11 @@ func (e *Exporter) do(j Job) {
 	}()
 	maxsize := strconv.Itoa(j.size)
 
-	args := []string{j.source, j.dest, "--width", maxsize, "--height", maxsize}
-	if j.xmp != nil && *j.xmp != "" { // insert xmp argument if present
+	args := []string{j.source, j.dest, "--width", maxsize, "--height", maxsize, "--hq", strconv.FormatBool(j.hq)}
+	if j.xmp != "" { // insert xmp argument if present
 		args = append(args, "")
 		copy(args[2:], args[1:]) // shift
-		args[1] = *j.xmp
+		args[1] = j.xmp
 	}
 
 	e.Log.WithField("args", args).Debug("calling darktable-cli")
