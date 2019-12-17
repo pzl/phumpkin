@@ -4,7 +4,7 @@
 			<v-img
 				class="thumby"
 				@click.stop="$emit('click', $event)"
-				:src="image.thumbs['small'].url"
+				:src="src"
 				:lazy-src="image.thumbs['x-small'].url"
 				v-ripple
 				>
@@ -110,6 +110,25 @@ export default {
 		},
 		rating() {
 			return this.hover_reject ? 0 : this.image.rating
+		},
+		src() {
+			let s = "medium"
+			switch (this.view_size) {
+				case 1:
+				case 2:
+				case 3:
+					s = "small"
+					break
+				case false:
+					s = "medium"
+					break
+				case 4:
+				case 6:
+				case 12:
+					s = "large"
+					break
+			}
+			return this.image.thumbs[s].url
 		},
 		sizes() {
 			return Object.keys(this.image.thumbs).map(s => {
