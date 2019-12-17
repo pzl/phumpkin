@@ -135,6 +135,10 @@ func (ph *PhotoHandler) Get(w http.ResponseWriter, r *http.Request) {
 	l := log.WithField("file", srcpath)
 	l.Debug("source file requested")
 
+	if _, err := os.Stat(srcpath); err == nil {
+		_, filename := filepath.Split(path)
+		w.Header().Set("Content-Disposition", "attachment; filename="+filename)
+	}
 	http.ServeFile(w, r, srcpath)
 }
 func (ph *PhotoHandler) GetThumb(w http.ResponseWriter, r *http.Request) {

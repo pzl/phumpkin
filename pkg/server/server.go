@@ -69,6 +69,7 @@ func writeJSON(w http.ResponseWriter, r *http.Request, v interface{}) {
 		return
 	}
 
+	w.Header().Set("Content-Type", "application/json")
 	_, err := w.Write(buf.Bytes())
 	if err != nil {
 		log := logger.GetLog(r)
