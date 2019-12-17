@@ -27,8 +27,11 @@
 
 			<v-menu v-model="menu" :position-x="menu_x" :position-y="menu_y" absolute offset-y >
 				<v-list>
-					<v-list-item v-for="(s,i) in sizes" :key="i" @click="">
-						<v-list-item-title ><a :href="s.url" target="_blank">{{ s.name }}</a></v-list-item-title>
+					<v-list-item v-for="(s,i) in sizes" :key="i" :href="s.url" target="_blank" two-line dense>
+						<v-list-item-content>
+							<v-list-item-title>{{ s.name }}</v-list-item-title>
+							<v-list-item-subtitle>{{ s.width }}x{{ s.height }}</v-list-item-subtitle>
+						</v-list-item-content>
 					</v-list-item>
 				</v-list>
 			</v-menu>
