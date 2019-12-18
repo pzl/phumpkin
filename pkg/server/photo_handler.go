@@ -36,7 +36,7 @@ type FileInfo struct {
 	Size     int64               `json:"size"`
 	Rating   int                 `json:"rating"`
 	Tags     []string            `json:"tags"`
-	XMP      []string            `json:"xmp"`
+	XMP      *darktable.Meta     `json:"xmp"`
 	Location *Location           `json:"loc"`
 	Thumbs   map[string]Resource `json:"thumbs"`
 	Original Resource            `json:"original"`
@@ -95,6 +95,14 @@ func (ph *PhotoHandler) List(w http.ResponseWriter, r *http.Request) {
 			}
 		}
 
+		var x darktable.Meta
+
+		if m, err := darktable.ReadXMP(name + ".xmp"); err == nil {
+			x = m
+		} else {
+			log.WithError(err).Error("error reading XMP")
+		}
+
 		found <- FileInfo{
 			Name:     path,
 			Dir:      fi.IsDir(),
@@ -102,6 +110,7 @@ func (ph *PhotoHandler) List(w http.ResponseWriter, r *http.Request) {
 			Rating:   3,
 			Tags:     []string{},
 			Location: nil,
+			XMP:      &x,
 			Original: Resource{
 				URL:    "http://" + r.Host + "/api/v1/photos/" + path,
 				Width:  2000,
