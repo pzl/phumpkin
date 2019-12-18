@@ -1,8 +1,13 @@
 package darktable
 
 import (
+	"bytes"
+	"encoding/json"
 	"encoding/xml"
+	"fmt"
+	"io"
 	"io/ioutil"
+	"os/exec"
 	"strconv"
 	"strings"
 )
@@ -122,4 +127,51 @@ func ReadXMP(file string) (Meta, error) {
 		Rights:          strings.Join(d.Description.Rights, ", "),
 		History:         ops,
 	}, nil
+}
+
+/* ------------ EXIF parsing --------------- */
+
+func ReadExif(file string) (map[string]interface{}, error) {
+
+	cmd := exec.Command("exiftool", "-j", file)
+
+	var so bytes.Buffer
+	var se bytes.Buffer
+
+	op, err := cmd.StdoutPipe()
+	if err != nil {
+		return nil, err
+	}
+	ep, err := cmd.StderrPipe()
+	if err != nil {
+		return nil, err
+	}
+
+	if err := cmd.Start(); err != nil {
+		return nil, err
+	}
+
+	io.Copy(&so, op) // nolint
+	io.Copy(&se, ep) // nolint
+
+	if err := cmd.Wait(); err != nil {
+		return nil, err
+	}
+
+	if se.Len() > 0 {
+		fmt.Printf("got exiftool stderr: %s\n", se.String())
+	}
+
+	var j interface{}
+	if err := json.Unmarshal(so.Bytes(), &j); err != nil {
+		return nil, err
+	}
+
+	if si, ok := j.([]interface{}); ok {
+		if m, ok2 := si[0].(map[string]interface{}); ok2 {
+			_ = m
+		}
+	}
+
+	return nil, nil
 }

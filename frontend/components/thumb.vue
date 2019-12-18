@@ -69,6 +69,8 @@ import Rating from '~/components/rating'
 import Tags from '~/components/tags'
 import { mapState, mapMutations, mapActions } from 'vuex'
 
+// color labels: Red, Yellow, Green, Blue, Purple
+
 export default {
 	props: {
 		index: {}, // not part of image, but it's place in the grid

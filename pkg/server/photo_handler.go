@@ -102,6 +102,9 @@ func (ph *PhotoHandler) List(w http.ResponseWriter, r *http.Request) {
 		} else {
 			log.WithError(err).Error("error reading XMP")
 		}
+		if _, err := darktable.ReadExif(name); err != nil {
+			log.WithError(err).Error("error reading EXIF")
+		}
 
 		found <- FileInfo{
 			Name:     path,

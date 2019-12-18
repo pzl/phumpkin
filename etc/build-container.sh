@@ -27,6 +27,9 @@ cp bin/phumpkin $cmt/phumpkin
 echo "[i] installing darktable"
 buildah run -- $c apk add darktable
 
+echo "[i] installing exiftool"
+buildah run -- $c apk add exiftool
+
 echo "[i] setting app container configs"
 buildah config --label name=phumpkin $c
 buildah config --port 80 $c
