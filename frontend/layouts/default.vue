@@ -25,19 +25,7 @@
 			</v-list>
 
 			<template v-slot:append>
-				<v-card outlined v-if="selected.length === 1" class="ma-2 mb-5">
-					<v-card-title>{{selected_image.name}}</v-card-title>
-					<v-card-subtitle><rating :readonly="true" :value="selected_image.rating" /></v-card-subtitle>
-
-					<v-card-text>{{ sizeof(selected_image.size) }}</v-card-text>
-
-					<v-card-text>{{selected_image.url}}</v-card-text>
-						
-					<v-card-text v-if="selected_image.loc"><v-icon small>mdi-map-marker</v-icon> {{ selected_image.loc.lat }}, {{ selected_image.loc.lon }}</v-card-text>
-					<v-card-text>
-						<tags :dark="false" :tags="selected_image.tags" />
-					</v-card-text>
-				</v-card>
+				<summary-card v-if="selected.length === 1" v-bind="selected_image" />
 			</template>
 		</v-navigation-drawer>
 
@@ -174,6 +162,7 @@
 import scrollUp from '~/components/scrollUp'
 import Rating from '~/components/rating'
 import Tags from '~/components/tags'
+import SummaryCard from '~/components/summaryCard'
 import { mapState, mapMutations, mapActions } from 'vuex'
 
 export default {
@@ -240,7 +229,7 @@ export default {
 			this.$vuetify.theme.dark = val
 		}
 	},
-	components: { scrollUp, Rating, Tags }
+	components: { scrollUp, Rating, Tags, SummaryCard }
 }
 </script>
 
