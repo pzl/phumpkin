@@ -5,15 +5,15 @@
 				class="thumby"
 				@click.stop="$emit('click', $event)"
 				:src="src"
-				:lazy-src="image.thumbs['x-small'].url"
+				:lazy-src="thumbs['x-small'].url"
 				v-ripple
 				>
 				<!-- 				:srcset="`
-				${image.thumbs['x-small'].url} ${image.thumbs['x-small'].width}w,
-				${image.thumbs['small'].url} ${image.thumbs['small'].width}w,
-				${image.thumbs['medium'].url} ${image.thumbs['medium'].width}w,
-				${image.thumbs['large'].url} ${image.thumbs['large'].width}w,
-				${image.thumbs['x-large'].url} ${image.thumbs['x-large'].width}w,
+				${thumbs['x-small'].url} ${thumbs['x-small'].width}w,
+				${thumbs['small'].url} ${thumbs['small'].width}w,
+				${thumbs['medium'].url} ${thumbs['medium'].width}w,
+				${thumbs['large'].url} ${thumbs['large'].width}w,
+				${thumbs['x-large'].url} ${thumbs['x-large'].width}w,
 				`"
 				-->
 				<template v-slot:placeholder>
@@ -39,19 +39,19 @@
 			<v-expand-transition v-if="view_size > 1 || view_size === false">
 				<v-container v-if="hover" class="transition-fast-in-fast-out black darken-2 v-card--reveal white--text hidden-sm-and-down" fluid>
 					<v-row dense class="d-flex justify-space-between align-center">
-						<div>{{ image.name }}</div>
-						<rating :value="image.rating" @input="rate({ image: index, rating: $event })" />
+						<div>{{ name }}</div>
+						<rating :value="display_rating" @input="rate({ image: index, rating: $event })" />
 					</v-row>
 					<div class="d-flex align-center">
-						<v-tooltip bottom v-if="image.loc">
+						<v-tooltip bottom v-if="loc">
 							<template v-slot:activator="{ on }">
-								<v-icon dark x-small v-if="image.loc" v-on="on">mdi-map-marker</v-icon>
+								<v-icon dark x-small v-if="loc" v-on="on">mdi-map-marker</v-icon>
 							</template>
-							{{ image.loc.lat }}, {{ image.loc.lon }}
+							{{ loc.lat }}, {{ loc.lon }}
 						</v-tooltip>
-						<tags :dark="true" :tags="image.tags" />
+						<tags :dark="true" :tags="tags" />
 						<v-spacer />
-						<v-btn icon dark small :href="image.original.url">
+						<v-btn icon dark small :href="original.url">
 							<v-icon>mdi-download</v-icon>
 						</v-btn>
 						<v-btn icon dark small @click="showMenu">
@@ -71,30 +71,16 @@ import { mapState, mapMutations, mapActions } from 'vuex'
 
 export default {
 	props: {
-		index: {},
-		image: {
-			/*
-				name
-				dir
-				size (in bytes)
-				rating
-				tags: ["string"]
-				xmp: null or "string"
-				loc: null or { lat: "", lon: "" }
-				thumbs: {
-					full: {
-						url: "...",
-						width: n,
-						height: n,
-					}
-				},
-				original: {
-					url: "...",
-					width: n,
-					height: n,
-				}
-			*/
-		},
+		index: {}, // not part of image, but it's place in the grid
+		name: {},
+		dir: {},
+		size: {}, // in bytes
+		rating: {},
+		tags: {}, // array of strings
+		xmp: {}, //
+		loc: {}, // null or {lat:'', lon:''}
+		thumbs: {}, // full: { url: "...", width: n, height: n}
+		original: {}, //{ url: "...", width: n, height: n}
 	},
 	data() {
 		return {
@@ -108,8 +94,8 @@ export default {
 		isSelected(){
 			return this.selected.includes(this.index)
 		},
-		rating() {
-			return this.hover_reject ? 0 : this.image.rating
+		display_rating() {
+			return this.hover_reject ? 0 : this.xmp.rating
 		},
 		src() {
 			let s = "medium"
@@ -128,13 +114,13 @@ export default {
 					s = "large"
 					break
 			}
-			return this.image.thumbs[s].url
+			return this.thumbs[s].url
 		},
 		sizes() {
-			return Object.keys(this.image.thumbs).map(s => {
+			return Object.keys(this.thumbs).map(s => {
 				return {
 					name: s,
-					...this.image.thumbs[s]
+					...this.thumbs[s]
 				}
 			}).sort((a,b) => a.width - b.width)
 		},

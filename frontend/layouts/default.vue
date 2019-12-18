@@ -232,16 +232,6 @@ export default {
 			const top = ( window.pageYOffset || document.documentElement.offsetTop || 0)
 			this.scrolled = top > 0
 		},
-		sizeof(b) {
-			const units = ["b","KB","MB","GB","TB"]
-			let unit = 0
-
-			while (b > 1024) {
-				b = b/1024
-				unit++
-			}
-			return b.toFixed(2)+" "+units[unit]
-		},
 		...mapMutations('images', ['clearSelection']),
 		...mapActions('interface', ['setViewAs']),
 	},

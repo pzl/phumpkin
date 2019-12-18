@@ -2,7 +2,7 @@
 	<v-container fluid>
 		<v-row :dense="view_dense">
 			<v-col v-for="(img, i) in images" :key="i" :cols="view_size">
-				<thumb :index="i" :image="img" @click="onClick(i, $event)"/>
+				<thumb v-bind="img" :index="i" @click="onClick(i, $event)"/>
 			</v-col>
 		</v-row>
 	</v-container>

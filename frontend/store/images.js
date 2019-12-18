@@ -20,7 +20,7 @@ export const mutations = {
 		state.selected.splice(idx, 1)
 	},
 	rate(state, { image, rating }) {
-		state.images[image].rating = rating
+		state.images[image].xmp.rating = rating
 	}
 }
 

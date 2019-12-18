@@ -6,7 +6,6 @@ import (
 	"io"
 	"os/exec"
 	"strconv"
-	"sync"
 
 	"github.com/sirupsen/logrus"
 )
@@ -34,7 +33,6 @@ type Exporter struct {
 	next chan Job
 	Log  *logrus.Logger
 	q    []Job //@todo -- needs to be synchronized between processor thread and adder thread
-	mx   sync.RWMutex
 }
 
 func New() *Exporter {
