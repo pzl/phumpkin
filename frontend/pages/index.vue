@@ -1,6 +1,7 @@
 <template>
-	<v-container fluid>
-		<v-row :dense="view_dense">
+	<v-container fluid class="d-flex">
+		<v-progress-circular indeterminate v-if="loading" class="py-12 mx-auto" color="deep-orange lighten-2" />
+		<v-row :dense="view_dense" v-else>
 			<v-col v-for="(img, i) in images" :key="i" :cols="view_size">
 				<thumb v-bind="img" :index="i" @click="onClick(i, $event)"/>
 			</v-col>
