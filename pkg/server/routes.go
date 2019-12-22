@@ -28,6 +28,7 @@ func (s *server) routes() {
 		v1.Use(mstk.APIVer(1))
 		v1.Mount("/photos", s.Photos())
 		v1.Get("/thumb/{size}/*", s.PhotoHandler.GetThumb)
+		v1.Get("/ws", s.PhotoHandler.Websocket)
 
 	})
 

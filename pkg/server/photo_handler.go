@@ -1,6 +1,7 @@
 package server
 
 import (
+	"encoding/json"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -10,8 +11,9 @@ import (
 	"github.com/go-chi/chi"
 	"github.com/pzl/mstk/logger"
 	"github.com/pzl/phumpkin/pkg/darktable"
-	"github.com/saracen/walker"
 	"github.com/sirupsen/logrus"
+	"nhooyr.io/websocket"
+	"nhooyr.io/websocket/wsjson"
 )
 
 type PhotoHandler struct {
@@ -44,100 +46,15 @@ type FileInfo struct {
 
 func (ph *PhotoHandler) List(w http.ResponseWriter, r *http.Request) {
 	log := logger.GetLog(r)
-	/*
-		f, err := os.Open(ph.photoDir)
-		if err != nil {
-			writeErr(w, http.StatusInternalServerError, err)
-			return
-		}
 
-		files, err := f.Readdir(0)
-		if err != nil {
-			writeErr(w, http.StatusInternalServerError, err)
-			return
-		}
-	*/
-
-	files := make([]FileInfo, 0, 300)
-	found := make(chan FileInfo)
-	done := make(chan struct{})
-
-	go func() {
-		for f := range found {
-			log.WithField("name", f).Trace("received file")
-			files = append(files, f)
-		}
-		done <- struct{}{}
-	}()
-
-	log.WithField("photoDir", ph.photoDir).Debug("scanning photoDir")
-	err := walker.WalkWithContext(r.Context(), ph.photoDir, func(name string, fi os.FileInfo) error {
-		log.WithField("filename", name).Trace("looping over file")
-
-		if name == ph.photoDir {
-			return nil
-		}
-		if fi.IsDir() { // recurse into dirs, but ignore folder entries themselves
-			return nil //filepath.SkipDir
-		}
-		if strings.HasSuffix(name, ".xmp") {
-			return nil
-		}
-		path := strings.TrimPrefix(name, ph.photoDir+"/")
-
-		thumbs := make(map[string]Resource)
-
-		for _, s := range Sizes {
-			thumbs[s.Name] = Resource{
-				URL:    "http://" + r.Host + "/api/v1/thumb/" + s.Name + "/" + thumbExt(path),
-				Width:  s.Max, //@todo get from actual
-				Height: s.Max, // ^^
-			}
-		}
-
-		var x darktable.Meta
-
-		if m, err := darktable.ReadXMP(name + ".xmp"); err == nil {
-			x = m
-		} else {
-			log.WithError(err).Error("error reading XMP")
-		}
-		if _, err := darktable.ReadExif(name); err != nil {
-			log.WithError(err).Error("error reading EXIF")
-		}
-
-		found <- FileInfo{
-			Name:     path,
-			Dir:      fi.IsDir(),
-			Size:     fi.Size(),
-			Rating:   3,
-			Tags:     []string{},
-			Location: nil,
-			XMP:      &x,
-			Original: Resource{
-				URL:    "http://" + r.Host + "/api/v1/photos/" + path,
-				Width:  2000,
-				Height: 2000,
-			},
-			Thumbs: thumbs,
-		}
-
-		return nil
-	}, walker.WithErrorCallback(func(name string, err error) error {
-		log.WithError(err).Error("encountered err when walking files")
-		return nil
-	}))
-	close(found)
+	photos, err := actionList(r.Context(), log, ph.photoDir, r.Host)
 	if err != nil {
 		writeErr(w, http.StatusInternalServerError, err)
 		return
 	}
-
-	<-done
 	writeJSON(w, r, struct {
 		Photos []FileInfo `json:"photos"`
-	}{files})
-
+	}{photos})
 }
 
 func (ph *PhotoHandler) Get(w http.ResponseWriter, r *http.Request) {
@@ -235,6 +152,91 @@ func (ph *PhotoHandler) GetThumb(w http.ResponseWriter, r *http.Request) {
 	}
 	l.Debug("sending thumb file")
 	http.ServeFile(w, r, thumbpath)
+}
+
+type SockRequest struct {
+	Action string   `json:"action"`
+	ID     string   `json:"_id"`
+	Params []string `json:"params"`
+}
+
+type SockResponse struct {
+	ID    string      `json:"_id"`
+	Error string      `json:"error,omitempty"`
+	Data  interface{} `json:"data,omitempty"`
+}
+
+func (ph *PhotoHandler) Websocket(w http.ResponseWriter, r *http.Request) {
+	log := logger.GetLog(r)
+	c, err := websocket.Accept(w, r, &websocket.AcceptOptions{
+		InsecureSkipVerify: true, // @todo: turn off after dev done
+	})
+	if err != nil {
+		log.WithError(err).Error("error when establishing websocket connection")
+		return
+	}
+	defer c.Close(websocket.StatusInternalError, "died.")
+	log.Debug("got websocket connection")
+
+	var req SockRequest
+	for {
+		_, rd, err := c.Reader(r.Context())
+		if err != nil {
+			// when going to a new page in browser: StatusGoingAway
+			// when just close() -- StatusNoStatusRcvd
+			switch websocket.CloseStatus(err) {
+			case websocket.StatusNormalClosure,
+				websocket.StatusGoingAway,
+				websocket.StatusNoStatusRcvd:
+				log.WithError(err).Info("socket closed")
+			default:
+				log.WithError(err).Error("socket closed, received unacceptable error")
+			}
+			return
+		}
+		if err := json.NewDecoder(rd).Decode(&req); err != nil {
+			log.WithError(err).Error("error unmarshalling json")
+			wsjson.Write(r.Context(), c, map[string]string{
+				"error": "invalid message",
+			})
+			continue
+		}
+		log.WithField("request", req).Trace("got websocket message")
+
+		if req.ID == "" {
+			wsjson.Write(r.Context(), c, map[string]interface{}{
+				"error": "missing ID",
+			})
+			continue
+		}
+
+		switch req.Action {
+		case "list", "List":
+			log.WithField("request", req).Trace("parsed as list request action")
+			photos, err := actionList(r.Context(), log, ph.photoDir, r.Host)
+			resp := SockResponse{ID: req.ID}
+			if err != nil {
+				resp.Error = err.Error()
+			} else {
+				resp.Data = photos
+			}
+			log.WithField("resp", resp).Trace("responding to list request")
+			wsjson.Write(r.Context(), c, resp)
+		case "":
+			wsjson.Write(r.Context(), c, map[string]interface{}{
+				"id":    req.ID,
+				"error": "missing action",
+			})
+		default:
+			wsjson.Write(r.Context(), c, map[string]interface{}{
+				"id":    req.ID,
+				"error": "unknown action: " + req.Action,
+			})
+		}
+	}
+
+	c.Close(websocket.StatusNormalClosure, "k im done with you")
+
 }
 
 // ------------ helpers / internal funcs

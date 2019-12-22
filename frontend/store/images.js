@@ -27,14 +27,29 @@ export const mutations = {
 export const actions = {
 	async loadImages({ commit }) {
 		commit('startLoading')
-		try {
-			const response = await this.$axios.$get("http://localhost:6001/api/v1/photos")
-			commit('setImages', response.photos)
-			commit('clearSelection')
-		} catch (error) {
-			// oh no
-			console.log("error: ")
-			console.log(error)
+
+		if (this.$sock.connected()) {
+			this.$sock.send({ action: "list"}, data => {
+				if ('error' in data) {
+					console.log('error: ')
+					console.log(data.error)
+				} else {
+					commit('setImages', data.data)
+					commit('clearSelection')
+				}
+			})
+		} else {
+			// fall back to HTTP
+			try {
+				// @todo: replace with location.origin + "/api.."
+				const response = await this.$axios.$get("http://localhost:6001/api/v1/photos")
+				commit('setImages', response.photos)
+				commit('clearSelection')
+			} catch (error) {
+				// oh no
+				console.log("error: ")
+				console.log(error)
+			}
 		}
 		commit('stopLoading')
 	},

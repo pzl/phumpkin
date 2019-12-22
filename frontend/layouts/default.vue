@@ -60,6 +60,9 @@
 		<v-app-bar app dense :collapse-on-scroll="!anySelected" :color="anySelected ? 'primary' : ''" :dark="anySelected" :clipped-right="!navCollapsed">
 			<v-app-bar-nav-icon @click.stop="nav_vis = !nav_vis" />
 			<v-toolbar-title>{{ anySelected ? `${selected.length} Selected` : 'Phumpkin' }}</v-toolbar-title>
+			<v-btn icon v-if="!connected" class="red--text" @click="reconnect">
+				<v-icon small>mdi-lan-disconnect</v-icon>
+			</v-btn>
 			<v-spacer />
 			<template v-if="anySelected">
 				<v-btn icon @click="clearSelection">
@@ -148,6 +151,8 @@
 			<nuxt />
 		</v-content>
 
+		<v-snackbar :value="toast.show" :color="toast.style">{{ toast.message }} <v-btn dark text @click="toast.show = false">Close</v-btn></v-snackbar>
+
 		<v-bottom-navigation class="hidden-md-and-up" app>
 		</v-bottom-navigation>
 
@@ -199,6 +204,11 @@ export default {
 			sort_asc: true,
 			show_search: false,
 			scrolled: false,
+			toast: {
+				show: false,
+				message: '',
+				style: '',
+			}
 		}
 	},
 	computed: {
@@ -211,6 +221,7 @@ export default {
 			return null
 		},
 		...mapState('images', ['images','selected']),
+		...mapState('socket',['connected']),
 	},
 	methods: {
 		onScroll() {
@@ -221,13 +232,19 @@ export default {
 			const top = ( window.pageYOffset || document.documentElement.offsetTop || 0)
 			this.scrolled = top > 0
 		},
+		reconnect() { this.$sock.reconnect() },
 		...mapMutations('images', ['clearSelection']),
 		...mapActions('interface', ['setViewAs']),
 	},
 	watch: {
-		darkness(val) {
-			this.$vuetify.theme.dark = val
-		}
+		darkness(val) { this.$vuetify.theme.dark = val },
+		connected(val) {
+			if (!val) {
+				this.toast.show = true
+				this.toast.message = "Disconnected from server"
+				this.toast.style = "error"
+			}
+		},
 	},
 	components: { scrollUp, Rating, Tags, SummaryCard }
 }
