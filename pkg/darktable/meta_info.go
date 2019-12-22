@@ -23,6 +23,7 @@ type Meta struct {
 	Creator         string        `json:"creator,omitempty"`
 	History         []DTOperation `json:"history,omitempty"`
 	Rights          string        `json:"rights"`
+	Title           string        `json:"title,omitempty"`
 }
 
 type DTOperation struct {
@@ -48,6 +49,7 @@ type DTXMP struct {
 		DTXMPVersion         string   `xml:"xmp_version,attr"`
 		DTColorLabels        []string `xml:"colorlabels>Seq>li"`
 		Creator              []string `xml:"creator>Seq>li"`
+		Title                []string `xml:"title>Alt>li,omitempty"`
 		DTHistory            []*struct {
 			BlendOpParams  string `xml:"blendop_params,attr"`
 			BlendOpVersion string `xml:"blendop_version,attr"`
@@ -65,7 +67,7 @@ type DTXMP struct {
 		DTMaskSrc     []string `xml:"mask_src>Seq>li,omitempty"`
 		DTMaskType    []string `xml:"mask_type>Seq>li,omitempty"`
 		DTMaskVersion []string `xml:"mask_version>Seq>li,omitempty"`
-		Rights        []string `xml:"rights>Seq>li,omitempty"`
+		Rights        []string `xml:"rights>Alt>li,omitempty"`
 	} `xml:"RDF>Description"`
 }
 
@@ -126,6 +128,7 @@ func ReadXMP(file string) (Meta, error) {
 		Creator:         strings.Join(d.Description.Creator, ", "),
 		Rights:          strings.Join(d.Description.Rights, ", "),
 		History:         ops,
+		Title:           strings.Join(d.Description.Title, ", "),
 	}, nil
 }
 

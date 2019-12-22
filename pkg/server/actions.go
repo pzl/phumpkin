@@ -10,6 +10,8 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
+// @todo: duplicates by XMP
+// primary may be <IMG>.ARW.xmp and dupe may be <IMG>_nn.ARW.XMP
 func actionList(ctx context.Context, log logrus.FieldLogger, dir string, host string) ([]FileInfo, error) {
 	files := make([]FileInfo, 0, 300)
 	found := make(chan FileInfo)
