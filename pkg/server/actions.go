@@ -179,6 +179,9 @@ func (a Action) GetSize(ctx context.Context, log logrus.FieldLogger, file string
 		// it's quicker than using a huge ARW
 
 		for _, s := range Sizes {
+			if size == "full" { // no larger thumb
+				continue
+			}
 			if s.Name == size { // skip yourself
 				continue
 			}
