@@ -10,7 +10,7 @@
 				<v-icon v-if="batt" :title="meta.exif.BatteryLevel" small>{{batt }}</v-icon>
 				<v-icon v-if="metering" :title="'Metering: '+meta.exif.MeteringMode" small>{{metering}}</v-icon>
 				<v-icon v-if="flash" :title="meta.exif.Flash" small>{{ flash }}</v-icon>
-				<v-icon v-if="meta.exif.CameraTemperature" :title="meta.exif.CameraTemperature" small>mdi-thermometer</v-icon>
+				<v-icon v-if="temp" :title="temp" small>mdi-thermometer</v-icon>
 				<v-icon v-if="meta.exif.FacesDetected" :title="meta.exif.FacesDetected" small>mdi-face-recognition</v-icon>
 			</v-row>
 
@@ -152,7 +152,16 @@ export default {
 				return this.meta.exif.ExposureTime + "s"
 			}
 			return this.meta.exif.ExposureTime
-		}
+		},
+		temp() {
+			if (!this.meta || !this.meta.exif) {
+				return null
+			}
+			return this.meta.exif.AmbientTemperature ||
+					this.meta.exif.CameraTemperature ||
+					this.meta.exif.BatteryTemperature ||
+					null
+		},
 	},
 	components: { Rating }
 }
