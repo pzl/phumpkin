@@ -15,7 +15,7 @@
 			</v-row>
 
 			<div v-if="meta.exif">
-				<v-icon small>mdi-camera-iris</v-icon> <v-icon v-if="meta.exif.SelfTimer && meta.exif.SelfTimer !== 'Off'">mdi-timer-3</v-icon>
+				<v-icon small>mdi-camera-iris</v-icon> <v-icon v-if="meta.exif.SelfTimer && meta.exif.SelfTimer !== 'Off'" small>mdi-camera-timer</v-icon>
 				<div>f / {{ meta.exif.Aperture }}</div>
 				<div>{{ exposure }}</div>
 				<div>ISO: {{ meta.exif.ISO }}</div>
