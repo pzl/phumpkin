@@ -1,6 +1,8 @@
 export default ({ app, store }, inject) => {
 	const pending = {}
+	let redies = []
 	let nextID = 1
+	let init_connect = false
 
 
 	const onopen = event => {
@@ -11,14 +13,22 @@ export default ({ app, store }, inject) => {
 		event.target.onmessage = onmessage
 		event.target.onclose = onclose
 		event.target.onerror = onerror
+		for (const r of redies) {
+			r.resolve()
+		}
+		redies = []
 	}
 	const onmessage = event => {
-		console.log("got message")
-		console.log(event)
+		//console.log("got message")
+		//console.log(event)
 
 		const j = JSON.parse(event.data)
 		if ("_id" in j && j._id in pending) {
-			pending[j._id](event.data)
+			if ('error' in j) {
+				pending[j._id].reject(JSON.parse(event.data).error)
+			} else {
+				pending[j._id].resolve(JSON.parse(event.data).data)
+			}
 			delete pending[j._id]
 		}
 	}
@@ -30,6 +40,10 @@ export default ({ app, store }, inject) => {
 	const onerror = event => {
 		console.log("socket error")
 		console.log(event)
+		for (const r of redies) {
+			r.reject()
+		}
+		redies = []
 	}
 
 	const t = {
@@ -39,9 +53,11 @@ export default ({ app, store }, inject) => {
 			this.sock = new WebSocket("ws://localhost:6001/api/v1/ws")
 			this.sock.onopen = onopen
 		},
-		send: function(data, cb) {
+		send: function(data) {
 			if (this.sock === null || this.sock.readyState !== 1) {
-				throw new Error('sock not ready')
+				return new Promise((resolve, reject) => {
+					reject("sock not ready")
+				})
 			}
 
 			// assign an ID if not explicitly provided
@@ -54,10 +70,20 @@ export default ({ app, store }, inject) => {
 			// save the ID for calling back
 			const id = data._id
 			this.sock.send(JSON.stringify(data))
-			pending[id] = cb
+			return new Promise((resolve, reject) => {
+				pending[id] = {resolve:resolve,reject:reject}
+			})
 		},
 		connected: function() {
 			return this.sock.readyState === 1
+		},
+		onready: function() {
+			if (init_connect) {
+				return new Promise((resolve, reject) => { resolve() })
+			}
+			return new Promise((resolve, reject) => {
+				redies.push({resolve:resolve, reject:reject})
+			})
 		},
 	}
 	t.reconnect()

@@ -29,15 +29,18 @@ export const actions = {
 		commit('startLoading')
 
 		if (this.$sock.connected()) {
-			this.$sock.send({ action: "list"}, data => {
-				if ('error' in data) {
-					console.log('error: ')
-					console.log(data.error)
-				} else {
-					commit('setImages', data.data)
+			this.$sock.send({action:"list"})
+				.then(data => {
+					commit('setImages', data)
 					commit('clearSelection')
-				}
-			})
+				})
+				.catch(error => {
+					console.log('error: ')
+					console.log(error)
+				})
+				.finally(() => {
+					commit('stopLoading')
+				})
 		} else {
 			// fall back to HTTP
 			try {
@@ -50,8 +53,8 @@ export const actions = {
 				console.log("error: ")
 				console.log(error)
 			}
+			commit('stopLoading')
 		}
-		commit('stopLoading')
 	},
 	toggleSelect({ commit, state }, image) {
 		if (state.selected.includes(image)) {
