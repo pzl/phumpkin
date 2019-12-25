@@ -154,12 +154,12 @@ func (a Action) GetSize(ctx context.Context, log logrus.FieldLogger, file string
 	// check modification times of source image and XMPs
 	var xmp string
 	lastMod := time.Unix(0, 0)
-	fi, err := os.Stat(filepath)
+	srcinfo, err := os.Stat(filepath)
 	if err != nil {
 		return "", nil
 	}
-	if fi.ModTime().After(lastMod) {
-		lastMod = fi.ModTime()
+	if srcinfo.ModTime().After(lastMod) {
+		lastMod = srcinfo.ModTime()
 	}
 	if fi, err := os.Stat(filepath + ".xmp"); err == nil {
 		xmp = filepath + ".xmp"
@@ -170,11 +170,37 @@ func (a Action) GetSize(ctx context.Context, log logrus.FieldLogger, file string
 	l.WithField("mod", lastMod).Trace("last modification time of original source")
 
 	// if thumb doesn't already exist (or original has changed), generate on the fly
-	fi, err = os.Stat(thumbpath)
+	fi, err := os.Stat(thumbpath)
 	if os.IsNotExist(err) || lastMod.After(fi.ModTime()) {
 		l.Debug("generating thumb on the fly")
+		src := filepath
 
-		job, err := a.s.darktable.Immediate(filepath, thumbpath, Px(size), darktable.SetXMP(xmp))
+		// if there is a larger thumb that is still up-to-date, generate from that.
+		// it's quicker than using a huge ARW
+
+		for _, s := range Sizes {
+			if s.Name == size { // skip yourself
+				continue
+			}
+			if s.Max < Px(size) && s.Max != 0 {
+				continue // thumb is smaller, except 'full' size
+			}
+			bigthumb := a.s.thumbDir + "/" + s.Name + "/" + thumbExt(file)
+			if ti, err := os.Stat(bigthumb); err == nil {
+				if ti.ModTime().After(srcinfo.ModTime()) {
+					src = bigthumb
+					break
+				}
+			}
+		}
+
+		// if using raw file, use XMP as a parameter
+		opts := make([]darktable.JobOpt, 0, 1)
+		if src == filepath {
+			opts = append(opts, darktable.SetXMP(xmp))
+		}
+
+		job, err := a.s.darktable.Immediate(src, thumbpath, Px(size), opts...)
 		if err != nil {
 			l.WithError(err).Error("error starting job")
 			return "", err
