@@ -79,7 +79,7 @@ export default {
 		size: {}, // in bytes
 		rating: {},
 		tags: {}, // array of strings
-		xmp: {}, //
+		meta: {}, //
 		loc: {}, // null or {lat:'', lon:''}
 		thumbs: {}, // full: { url: "...", width: n, height: n}
 		original: {}, //{ url: "...", width: n, height: n}
@@ -97,7 +97,7 @@ export default {
 			return this.selected.includes(this.index)
 		},
 		display_rating() {
-			return this.hover_reject ? 0 : this.xmp.rating
+			return this.hover_reject ? 0 : this.meta.rating
 		},
 		src() {
 			let s = "medium"
@@ -139,7 +139,6 @@ export default {
 			this.$nextTick(() => {
 				this.menu = true
 			})
-
 		},
 		...mapMutations('images', ['rate']),
 	},

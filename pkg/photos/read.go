@@ -1,9 +1,10 @@
-package darktable
+package photos
 
 import (
 	"bytes"
 	"encoding/json"
 	"encoding/xml"
+	"errors"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -11,31 +12,6 @@ import (
 	"strconv"
 	"strings"
 )
-
-// public, cleaned up data
-
-type Meta struct {
-	DerivedFromFile string        `json:"derived_from"`
-	Rating          int           `json:"rating"`
-	AutoPresets     bool          `json:"auto_presets_applied"`
-	XMPVersion      int           `json:"xmp_version"`
-	ColorLabels     []string      `json:"color_labels,omitempty"`
-	Creator         string        `json:"creator,omitempty"`
-	History         []DTOperation `json:"history,omitempty"`
-	Rights          string        `json:"rights"`
-	Title           string        `json:"title,omitempty"`
-}
-
-type DTOperation struct {
-	Name           string `json:"name"`
-	Enabled        bool   `json:"enabled"`
-	ModVersion     int    `json:"modversion"`
-	Params         string `json:"params"`
-	MultiName      string `json:"multi_name"`
-	MultiPriority  int    `json:"multi_priority"`
-	BlendOpVersion int    `json:"blendop_version"`
-	BlendOpParams  string `json:"blendop_params"`
-}
 
 // ---------------- XMP parsing -----------
 
@@ -170,11 +146,16 @@ func ReadExif(file string) (map[string]interface{}, error) {
 		return nil, err
 	}
 
+	exif := make(map[string]interface{})
 	if si, ok := j.([]interface{}); ok {
 		if m, ok2 := si[0].(map[string]interface{}); ok2 {
-			_ = m
+			exif = m
+		} else {
+			return nil, errors.New("unable to parse exiftool output into map")
 		}
+	} else {
+		return nil, errors.New("unable to parse exiftool output")
 	}
 
-	return nil, nil
+	return exif, nil
 }

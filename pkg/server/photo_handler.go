@@ -6,48 +6,21 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
-	"time"
 
 	"github.com/go-chi/chi"
 	"github.com/pzl/mstk/logger"
-	"github.com/pzl/phumpkin/pkg/darktable"
-	"github.com/sirupsen/logrus"
 	"nhooyr.io/websocket"
 	"nhooyr.io/websocket/wsjson"
 )
 
 type PhotoHandler struct {
-	photoDir  string
-	thumbDir  string
-	dataDir   string
-	darktable *darktable.Exporter
-}
-
-type Location struct {
-	Lat string `json:"lat"`
-	Lon string `json:"lon"`
-}
-type Resource struct {
-	URL    string `json:"url"`
-	Width  int    `json:"width"`
-	Height int    `json:"height"`
-}
-type FileInfo struct {
-	Name     string              `json:"name"`
-	Dir      bool                `json:"dir"`
-	Size     int64               `json:"size"`
-	Rating   int                 `json:"rating"`
-	Tags     []string            `json:"tags"`
-	XMP      *darktable.Meta     `json:"xmp"`
-	Location *Location           `json:"loc"`
-	Thumbs   map[string]Resource `json:"thumbs"`
-	Original Resource            `json:"original"`
+	s *server
 }
 
 func (ph *PhotoHandler) List(w http.ResponseWriter, r *http.Request) {
 	log := logger.GetLog(r)
 
-	photos, err := actionList(r.Context(), log, ph.photoDir, r.Host)
+	photos, err := ph.s.actions.List(r.Context(), log, r.Host)
 	if err != nil {
 		writeErr(w, http.StatusInternalServerError, err)
 		return
@@ -60,7 +33,7 @@ func (ph *PhotoHandler) List(w http.ResponseWriter, r *http.Request) {
 func (ph *PhotoHandler) Get(w http.ResponseWriter, r *http.Request) {
 	log := logger.GetLog(r)
 	path := chi.URLParam(r, "*")
-	srcpath := ph.photoDir + "/" + path
+	srcpath := ph.s.photoDir + "/" + path
 	l := log.WithField("file", srcpath)
 	l.Debug("source file requested")
 
@@ -76,88 +49,39 @@ func (ph *PhotoHandler) GetThumb(w http.ResponseWriter, r *http.Request) {
 	size := chi.URLParam(r, "size")
 	path := chi.URLParam(r, "*")
 
-	thumbpath := ph.thumbDir + "/" + size + "/" + path
-
-	log.WithFields(logrus.Fields{
-		"size":      size,
-		"path":      path,
-		"thumbpath": thumbpath,
-	}).Debug("thumb request")
-	l := log.WithField("thumb", thumbpath)
-
 	// look for original file
-	search := ph.photoDir + "/" + strings.Replace(path, ".jpg", ".*", -1)
+	search := ph.s.photoDir + "/" + strings.Replace(path, ".jpg", ".*", -1)
 	matches, err := filepath.Glob(search)
-	l.WithField("search", search).Debug("searching for original file")
+	log.WithField("search", search).Debug("searching for original file")
 	if err != nil {
-		l.WithError(err).Error("error looking for original for thumb")
+		log.WithError(err).Error("error looking for original for thumb")
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 	if len(matches) == 0 {
-		l.Debug("original file not found, returning 404")
+		log.Debug("original file not found, returning 404")
 		http.NotFound(w, r)
 		return
 	}
 	if len(matches) > 2 {
-		l.WithField("matches", matches).Warnf("found %d source matches!", len(matches))
+		log.WithField("matches", matches).Warnf("found %d source matches!", len(matches))
 	}
 
-	// check modification times of source image and XMPs
-	var src string
-	var xmp string
-	lastMod := time.Unix(0, 0)
-	for _, m := range matches {
-		fi, err := os.Stat(m)
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-			return
-		}
-		if fi.ModTime().After(lastMod) {
-			lastMod = fi.ModTime()
-		}
-
-		// grab for later use
-		if strings.HasSuffix(strings.ToLower(m), ".xmp") {
-			xmp = m
-		} else {
-			src = m
-		}
-	}
-	l.WithField("mod", lastMod).Trace("last modification time of original source")
-
-	// if thumb doesn't already exist (or original has changed), generate on the fly
-	fi, err := os.Stat(thumbpath)
-	if os.IsNotExist(err) || lastMod.After(fi.ModTime()) {
-		l.Debug("generating thumb on the fly")
-
-		job, err := ph.darktable.Immediate(src, thumbpath, Px(size), darktable.SetXMP(xmp))
-		if err != nil {
-			l.WithError(err).Error("error starting job")
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-			return
-		}
-		select {
-		case <-job.Done:
-			l.Trace("thumb generation job complete")
-		case <-r.Context().Done():
-			l.Trace("HTTP client disconnected, stopping immediate thumb request")
-			job.Cancel()
-			return
-		}
-	} else if err != nil {
-		l.WithError(err).Error("error looking up thumb file")
+	if _, err := ph.s.actions.GetSize(r.Context(), log, strings.TrimPrefix(matches[0], ph.s.photoDir+"/"), size, false, r.Host); err != nil {
+		log.WithError(err).Error("error getting image at size")
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	l.Debug("sending thumb file")
-	http.ServeFile(w, r, thumbpath)
+
+	fp := ph.s.thumbDir + "/" + size + "/" + path
+	log.WithField("file", fp).Debug("sending thumb file")
+	http.ServeFile(w, r, fp)
 }
 
 type SockRequest struct {
-	Action string   `json:"action"`
-	ID     string   `json:"_id"`
-	Params []string `json:"params"`
+	Action string                 `json:"action"`
+	ID     string                 `json:"_id"`
+	Params map[string]interface{} `json:"params"`
 }
 
 type SockResponse struct {
@@ -210,29 +134,82 @@ func (ph *PhotoHandler) Websocket(w http.ResponseWriter, r *http.Request) {
 			continue
 		}
 
+		resp := SockResponse{ID: req.ID}
 		switch req.Action {
 		case "list", "List":
 			log.WithField("request", req).Trace("parsed as list request action")
-			photos, err := actionList(r.Context(), log, ph.photoDir, r.Host)
-			resp := SockResponse{ID: req.ID}
+			photos, err := ph.s.actions.List(r.Context(), log, r.Host)
 			if err != nil {
 				resp.Error = err.Error()
 			} else {
 				resp.Data = photos
 			}
 			log.WithField("resp", resp).Trace("responding to list request")
-			wsjson.Write(r.Context(), c, resp)
+		case "size", "Size":
+			log.WithField("request", req).Trace("parsed size request action")
+			if _, ok := req.Params["file"]; !ok {
+				resp.Error = "missing file argument"
+				break
+			}
+			if _, ok := req.Params["size"]; !ok {
+				resp.Error = "missing size argument"
+				break
+			}
+			if _, ok := req.Params["b64"]; !ok {
+				resp.Error = "missing b64 argument"
+				break
+			}
+			file, ok := req.Params["file"].(string)
+			if !ok {
+				resp.Error = "file expected to be a string"
+				break
+			}
+			size, ok := req.Params["size"].(string)
+			if !ok {
+				resp.Error = "size expected to be a string"
+				break
+			}
+			var b64 bool
+			switch v := req.Params["b64"].(type) {
+			case bool:
+				b64 = v
+			case int:
+				b64 = v == 1
+			case string:
+				b64 = v == "1" || v == "true"
+			default:
+				b64 = false
+			}
+			data, err := ph.s.actions.GetSize(r.Context(), log, file, size, b64, r.Host)
+			if err != nil {
+				resp.Error = err.Error()
+				break
+			}
+			resp.Data = data
+		case "meta", "Meta", "META":
+			log.WithField("request", req).Trace("photo info request")
+			if _, ok := req.Params["file"]; !ok {
+				resp.Error = "missing file argument"
+				break
+			}
+			file, ok := req.Params["file"].(string)
+			if !ok {
+				resp.Error = "file expected to be a string"
+				break
+			}
+			meta, err := ph.s.mgr.Load(log, ph.s.photoDir+"/"+file)
+			if err != nil {
+				log.WithError(err).Error("failed to get meta info")
+				resp.Error = "failed to get meta info"
+			} else {
+				resp.Data = meta
+			}
 		case "":
-			wsjson.Write(r.Context(), c, map[string]interface{}{
-				"id":    req.ID,
-				"error": "missing action",
-			})
+			resp.Error = "missing action"
 		default:
-			wsjson.Write(r.Context(), c, map[string]interface{}{
-				"id":    req.ID,
-				"error": "unknown action: " + req.Action,
-			})
+			resp.Error = "unknown action: " + req.Action
 		}
+		wsjson.Write(r.Context(), c, resp)
 	}
 
 	c.Close(websocket.StatusNormalClosure, "k im done with you")
