@@ -75,12 +75,38 @@ func (a Action) List(ctx context.Context, log logrus.FieldLogger, host string) (
 			return err
 		}
 
+		// @todo: this doesn't account for darktable crops
+		w, ok := meta.EXIF["ImageWidth"].(int)
+		if !ok {
+			w = 8000
+		}
+		h, ok := meta.EXIF["ImageHeight"].(int)
+		if !ok {
+			h = 5320
+		}
+
 		thumbs := make(map[string]Resource)
 		for _, s := range Sizes {
+			var rw int
+			var rh int
+
+			if w > h {
+				rw = s.Max
+				rh = int(float64(h) / (float64(w) / float64(rw)))
+			} else {
+				rh = s.Max
+				rw = int(float64(w) / (float64(h) / float64(rh)))
+			}
+
+			if s.Name == "full" {
+				rw = w
+				rh = h
+			}
+
 			thumbs[s.Name] = Resource{
 				URL:    "http://" + host + "/api/v1/thumb/" + s.Name + "/" + thumbExt(path),
-				Width:  s.Max, //@todo get from actual
-				Height: s.Max, // ^^
+				Width:  rw,
+				Height: rh,
 			}
 		}
 
@@ -94,8 +120,8 @@ func (a Action) List(ctx context.Context, log logrus.FieldLogger, host string) (
 			Meta:     &meta,
 			Original: Resource{
 				URL:    "http://" + host + "/api/v1/photos/" + path,
-				Width:  2000,
-				Height: 2000,
+				Width:  w,
+				Height: h,
 			},
 			Thumbs: thumbs,
 		}
