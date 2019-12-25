@@ -9,6 +9,7 @@
 			<v-row>
 				<v-icon v-if="batt" :title="meta.exif.BatteryLevel" small>{{batt }}</v-icon>
 				<v-icon v-if="metering" :title="'Metering: '+meta.exif.MeteringMode" small>{{metering}}</v-icon>
+				<v-icon v-if="focus_icon" :title="meta.exif.AFAreaMode" small>{{focus_icon}}</v-icon>
 				<v-icon v-if="flash" :title="meta.exif.Flash" small>{{ flash }}</v-icon>
 				<v-icon v-if="temp" :title="temp" small>mdi-thermometer</v-icon>
 				<v-icon v-if="meta.exif.FacesDetected" :title="meta.exif.FacesDetected" small>mdi-face-recognition</v-icon>
@@ -161,6 +162,18 @@ export default {
 					this.meta.exif.CameraTemperature ||
 					this.meta.exif.BatteryTemperature ||
 					null
+		},
+		focus_icon() {
+			if (!this.meta || !this.meta.exif || !this.meta.exif.AFAreaMode) {
+				return null
+			}
+			switch (this.meta.exif.AFAreaMode) {
+				case 'Flexible Spot': return 'mdi-image-filter-center-focus'
+				case 'Manual': return 'mdi-target'
+				case 'Tracking': return 'mdi-face-recognition'
+				case 'Auto': return 'mdi-focus-auto' // 'Auto' may not be actual string
+			}
+			return 'mdi-focus-field'
 		},
 	},
 	components: { Rating }
