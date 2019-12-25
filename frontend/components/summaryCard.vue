@@ -1,10 +1,30 @@
 <template>
 	<v-card outlined  class="ma-2 mb-5 summary-card" :max-height="600">
-		<v-card-title>{{name}}</v-card-title>
+		<v-card-title>{{name}} <sup><v-icon small v-if="meta.exif.Make" :title="meta.exif.Model">mdi-{{ camera_icon }}</v-icon></sup></v-card-title>
 		<v-card-subtitle><rating :readonly="true" :value="meta.rating" /></v-card-subtitle>
 
 		<v-card-text>
 			<div>{{ sizeof }}</div>
+
+			<v-row>
+				<v-icon v-if="batt" :title="meta.exif.BatteryLevel" small>{{batt }}</v-icon>
+				<v-icon v-if="metering" :title="'Metering: '+meta.exif.MeteringMode" small>{{metering}}</v-icon>
+				<v-icon v-if="flash" :title="meta.exif.Flash" small>{{ flash }}</v-icon>
+				<v-icon v-if="meta.exif.CameraTemperature" :title="meta.exif.CameraTemperature" small>mdi-thermometer</v-icon>
+				<v-icon v-if="meta.exif.FacesDetected" :title="meta.exif.FacesDetected" small>mdi-face-recognition</v-icon>
+			</v-row>
+
+			<div v-if="meta.exif">
+				<v-icon small>mdi-camera-iris</v-icon> <v-icon v-if="meta.exif.SelfTimer && meta.exif.SelfTimer !== 'Off'">mdi-timer-3</v-icon>
+				<div>f / {{ meta.exif.Aperture }}</div>
+				<div>{{ exposure }}</div>
+				<div>ISO: {{ meta.exif.ISO }}</div>
+				<div>Focal Length: {{meta.exif.FocalLength}}</div>
+				<div>Focus Mode: {{meta.exif.FocusMode}}</div>
+				<div>IS: {{meta.exif.ImageStabilization}}</div>
+			</div>
+
+			<div v-if="meta.exif.LensID">{{meta.exif.LensID}}</div>
 
 			<div class="loc" v-if="loc"><v-icon small>mdi-map-marker</v-icon> {{ loc.lat }}, {{ loc.lon }}</div>
 			<tags v-if="tags.length" :dark="false" :tags="tags" />
@@ -89,6 +109,50 @@ export default {
 			}
 			return b.toFixed(2)+" "+units[unit]
 		},
+		camera_icon() {
+			if (!this.meta || !this.meta.exif || !this.meta.exif.Make) {
+				return ''
+			}
+			switch (this.meta.exif.Make) {
+				case 'SONY': return 'alpha'
+				case 'CANON': return 'alpha-c'
+				case 'iPhone': return 'apple'
+			}
+		},
+		batt() {
+			if (!this.meta || !this.meta.exif || !this.meta.exif.BatteryLevel) {
+				return null
+			}
+			const lvl = parseInt(this.meta.exif.BatteryLevel.replace('%',''), 10)
+			return 'mdi-battery-'+Math.ceil(lvl / 10) * 10
+		},
+		metering() {
+			if (!this.meta || !this.meta.exif || !this.meta.exif.MeteringMode) {
+				return null
+			}
+			switch (this.meta.exif.MeteringMode) {
+				case 'Multi-segment': return 'mdi-camera-metering-matrix'
+			}
+			return null
+		},
+		flash() {
+			if (!this.meta || !this.meta.exif || !this.meta.exif.Flash) {
+				return null
+			}
+			if (this.meta.exif.Flash.startsWith("Off")) {
+				return 'mdi-flash-off'
+			}
+			return null
+		},
+		exposure() {
+			if (!this.meta || !this.meta.exif || !this.meta.exif.ExposureTime) {
+				return null
+			}
+			if ( !(""+this.meta.exif.ExposureTime).includes('/') ) {
+				return this.meta.exif.ExposureTime + "s"
+			}
+			return this.meta.exif.ExposureTime
+		}
 	},
 	components: { Rating }
 }
