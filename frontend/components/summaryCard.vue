@@ -3,57 +3,96 @@
 		<v-card-title>{{name}} <sup><v-icon small v-if="meta.exif.Make" :title="meta.exif.Model">mdi-{{ camera_icon }}</v-icon></sup></v-card-title>
 		<v-card-subtitle><rating :readonly="true" :value="meta.rating" /></v-card-subtitle>
 
+		<v-tabs grow v-model="tab" height="20px">
+			<v-tab style="min-width: 20px" class="pa-0" href="#basic"><v-icon small>mdi-calendar-blank</v-icon></v-tab>
+			<v-tab style="min-width: 20px" class="pa-0" href="#shot-info"><v-icon small>mdi-camera-iris</v-icon></v-tab>
+			<v-tab style="min-width: 20px" class="pa-0" href="#tags"><v-icon small>mdi-tag-heart</v-icon></v-tab>
+			<v-tab style="min-width: 20px" class="pa-0" href="#edits" v-if="meta.history && meta.history.length"><v-icon small>mdi-image-edit</v-icon></v-tab>
+			<v-tab style="min-width: 20px" class="pa-0" href="#copy"><v-icon small>mdi-copyright</v-icon></v-tab>
+		</v-tabs>
+
 		<v-card-text>
-			<div>{{ sizeof }}</div>
+			<v-tabs-items v-model="tab">
+				<v-tab-item value="basic">
+					<div>{{ sizeof }}</div>
+					<div>{{ original.width }}x{{ original.height }}</div>
+					<div v-if="taken">{{taken}}</div>
+				</v-tab-item>
+				<v-tab-item value="shot-info">
+					<v-row no-gutters justify="space-between">
+						<v-col cols="1" v-if="metering">
+							<v-icon :title="'Metering: '+meta.exif.MeteringMode" small>{{ metering }}</v-icon>
+						</v-col>
+						<v-col cols="1" v-if="focus_icon">
+							<v-icon :title="meta.exif.AFAreaMode" small>{{ focus_icon }}</v-icon>
+						</v-col>
+						<v-col cols="1" v-if="flash">
+							<v-icon :title="meta.exif.Flash" small>{{ flash }}</v-icon>
+						</v-col>
+						<v-col cols="1" v-if="meta.exif.ImageStabilization">
+							<v-icon :title="'IS: '+meta.exif.ImageStabilization" small>mdi-vibrate{{ meta.exif.ImageStabilization.includes("On") ? '' : '-off' }}</v-icon>
+						</v-col>
+						<v-col cols="1" v-if="temp">
+							<v-icon :title="temp" small>mdi-thermometer</v-icon>
+						</v-col>
+						<v-col cols="1" v-if="meta.exif.FacesDetected">
+							<v-icon :title="meta.exif.FacesDetected" small>mdi-face-recognition</v-icon>
+						</v-col>
+						<v-col cols="1"  v-if="meta.exif.SelfTimer && meta.exif.SelfTimer !== 'Off'">
+							<v-icon :title="meta.exif.SelfTimer" small>mdi-camera-timer</v-icon>
+						</v-col>
+						<v-col cols="1" v-if="batt">
+							<v-icon :title="meta.exif.BatteryLevel" small>{{ batt }}</v-icon>
+						</v-col>
+					</v-row>
+					<div v-if="meta.exif">
+						<v-row dense justify="space-between">
+							<v-col cols="3">f / {{ meta.exif.Aperture }}</v-col>
+							<v-col cols="auto">{{ exposure }}</v-col>
+							<v-col cols="auto">ISO: {{ meta.exif.ISO }}</v-col>
+						</v-row>
+						<div>Focal Length: {{meta.exif.FocalLength}}</div>
+						<div>Focus Mode: {{meta.exif.FocusMode}}</div>
+					</div>
 
-			<v-row>
-				<v-icon v-if="batt" :title="meta.exif.BatteryLevel" small>{{batt }}</v-icon>
-				<v-icon v-if="metering" :title="'Metering: '+meta.exif.MeteringMode" small>{{metering}}</v-icon>
-				<v-icon v-if="focus_icon" :title="meta.exif.AFAreaMode" small>{{focus_icon}}</v-icon>
-				<v-icon v-if="flash" :title="meta.exif.Flash" small>{{ flash }}</v-icon>
-				<v-icon v-if="temp" :title="temp" small>mdi-thermometer</v-icon>
-				<v-icon v-if="meta.exif.FacesDetected" :title="meta.exif.FacesDetected" small>mdi-face-recognition</v-icon>
-			</v-row>
+					<div v-if="meta.exif.LensID">{{meta.exif.LensID}}</div>
+				</v-tab-item>
+				<v-tab-item value="tags">
+					<v-row v-if="colors" dense>
+						<v-col v-for="(c,i) in colors" :key="i">
+							<v-chip :color="c.toLowerCase()" small></v-chip>
+						</v-col>
+					</v-row>
+				</v-tab-item>
+				<v-tab-item value="edits" v-if="meta.history && meta.history.length">
+					<div class="d-flex">
+						<span>History</span>
+						<v-spacer />
+						<v-btn icon x-small @click="show_history = !show_history"><v-icon small>mdi-menu-{{show_history ? 'up' :'down'}}</v-icon></v-btn>
+					</div>
 
-			<div v-if="meta.exif">
-				<v-icon small>mdi-camera-iris</v-icon> <v-icon v-if="meta.exif.SelfTimer && meta.exif.SelfTimer !== 'Off'" small>mdi-camera-timer</v-icon>
-				<div>f / {{ meta.exif.Aperture }}</div>
-				<div>{{ exposure }}</div>
-				<div>ISO: {{ meta.exif.ISO }}</div>
-				<div>Focal Length: {{meta.exif.FocalLength}}</div>
-				<div>Focus Mode: {{meta.exif.FocusMode}}</div>
-				<div>IS: {{meta.exif.ImageStabilization}}</div>
-			</div>
-
-			<div v-if="meta.exif.LensID">{{meta.exif.LensID}}</div>
+					<v-expand-transition>
+						<div v-if="show_history">
+							<v-list dense>
+								<v-list-item v-for="(h,i) in meta.history" :key="i" class="pa-0">
+										<v-list-item-title style="flex-grow: 11">{{ h.name }}</v-list-item-title>
+										<v-list-item-subtitle v-if="h.multi_name">{{ h.multi_name }}</v-list-item-subtitle>
+										<v-list-item-icon>
+											<v-icon x-small dense color="grey lighten-1">mdi-radiobox-{{h.enabled ? 'marked' : 'blank' }}</v-icon>
+										</v-list-item-icon>
+								</v-list-item>
+							</v-list>
+						</div>
+					</v-expand-transition>
+				</v-tab-item>
+				<v-tab-item value="copy">
+					<div v-if="meta.creator">Creator: {{ meta.creator }}</div>
+					<div v-if="meta.rights">Rights: {{ meta.rights }}</div>
+				</v-tab-item>
+			</v-tabs-items>
 
 			<div class="loc" v-if="loc"><v-icon small>mdi-map-marker</v-icon> {{ loc.lat }}, {{ loc.lon }}</div>
 			<tags v-if="tags.length" :dark="false" :tags="tags" />
-
-			<div v-if="meta.creator">Creator: {{ meta.creator }}</div>
-			<div v-if="meta.rights">Rights: {{ meta.rights }}</div>
-
-			<div v-if="meta.history && meta.history.length">
-				<div class="d-flex">
-					<span>History</span>
-					<v-spacer />
-					<v-btn icon x-small @click="show_history = !show_history"><v-icon small>mdi-menu-{{show_history ? 'up' :'down'}}</v-icon></v-btn>
-				</div>
-
-				<v-expand-transition>
-					<div v-if="show_history">
-						<v-list dense>
-							<v-list-item v-for="(h,i) in meta.history" :key="i" class="pa-0">
-									<v-list-item-title style="flex-grow: 11">{{ h.name }}</v-list-item-title>
-									<v-list-item-subtitle v-if="h.multi_name">{{ h.multi_name }}</v-list-item-subtitle>
-									<v-list-item-icon>
-										<v-icon x-small dense color="grey lighten-1">mdi-radiobox-{{h.enabled ? 'marked' : 'blank' }}</v-icon>
-									</v-list-item-icon>
-							</v-list-item>
-						</v-list>
-					</div>
-				</v-expand-transition>
-			</div>
 		</v-card-text>
 
 		<v-card-actions>
@@ -79,6 +118,7 @@
 
 <script>
 import Rating from '~/components/rating'
+import { parseISO, format } from 'date-fns'
 
 export default {
 	props: {
@@ -96,6 +136,7 @@ export default {
 		return {
 			show_meta: false,
 			show_history: false,
+			tab: null,
 		}
 	},
 	computed: {
@@ -174,6 +215,38 @@ export default {
 				case 'Auto': return 'mdi-focus-auto' // 'Auto' may not be actual string
 			}
 			return 'mdi-focus-field'
+		},
+		taken() {
+			if (!this.meta || !this.meta.exif || !this.meta.exif.DateTimeOriginal) {
+				return null
+			}
+			const parts = this.meta.exif.DateTimeOriginal.split(' ')
+			parts[0] = parts[0].replace(/:/g, "-")
+
+			let d = parts.join("T")
+			
+			if ('TimeZone' in this.meta.exif && this.meta.exif.TimeZone) {
+				d += this.meta.exif.TimeZone
+			} else if ('OffsetTime' in this.meta.exif && this.meta.exif.OffsetTime) {
+				d += this.meta.exif.OffsetTime
+			}
+
+			return format(parseISO(d), "PPpp")
+		},
+		colors() {
+			if (!this.meta || !this.meta.color_labels || !this.meta.color_labels.length) {
+				return null
+			}
+			return this.meta.color_labels.map(c => {
+				switch (c) {
+					case "0": return "Red"
+					case "1": return "Yellow"
+					case "2": return "Green"
+					case "3": return "Blue"
+					case "4": return "Purple"
+					default: return "Black"
+				}
+			})
 		},
 	},
 	components: { Rating }
