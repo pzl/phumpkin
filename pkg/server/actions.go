@@ -76,14 +76,16 @@ func (a Action) List(ctx context.Context, log logrus.FieldLogger, host string) (
 		}
 
 		// @todo: this doesn't account for darktable crops
-		w, ok := meta.EXIF["ImageWidth"].(int)
+		fw, ok := meta.EXIF["ImageWidth"].(float64)
 		if !ok {
-			w = 8000
+			fw = 8000
 		}
-		h, ok := meta.EXIF["ImageHeight"].(int)
+		fh, ok := meta.EXIF["ImageHeight"].(float64)
 		if !ok {
-			h = 5320
+			fh = 5320
 		}
+		w := int(fw)
+		h := int(fh)
 
 		thumbs := make(map[string]Resource)
 		for _, s := range Sizes {
