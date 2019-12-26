@@ -32,8 +32,6 @@ type FileInfo struct {
 	Name     string              `json:"name"`
 	Dir      bool                `json:"dir"`
 	Size     int64               `json:"size"`
-	Rating   int                 `json:"rating"`
-	Tags     []string            `json:"tags"`
 	Meta     *photos.Meta        `json:"meta"`
 	Location *Location           `json:"loc"`
 	Thumbs   map[string]Resource `json:"thumbs"`
@@ -116,8 +114,6 @@ func (a Action) List(ctx context.Context, log logrus.FieldLogger, host string) (
 			Name:     path,
 			Dir:      fi.IsDir(),
 			Size:     fi.Size(),
-			Rating:   3,
-			Tags:     []string{},
 			Location: nil,
 			Meta:     &meta,
 			Original: Resource{

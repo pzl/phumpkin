@@ -36,6 +36,7 @@ type DTXMP struct {
 			Operation      string `xml:"operation,attr"`
 			Params         string `xml:"params,attr"`
 		} `xml:"history>Seq>li,omitempty"`
+		DTTags        []string `xml:"hierarchicalSubject>Seq>li,omitempty"`
 		DTMask        []string `xml:"mask>Seq>li,omitempty"`
 		DTMaskID      []string `xml:"mask_id>Seq>li,omitempty"`
 		DTMaskName    []string `xml:"mask_name>Seq>li,omitempty"`
@@ -105,6 +106,7 @@ func ReadXMP(file string) (Meta, error) {
 		Rights:          strings.Join(d.Description.Rights, ", "),
 		History:         ops,
 		Title:           strings.Join(d.Description.Title, ", "),
+		Tags:            d.Description.DTTags,
 	}, nil
 }
 

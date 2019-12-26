@@ -63,6 +63,7 @@
 							<v-chip :color="c.toLowerCase()" small></v-chip>
 						</v-col>
 					</v-row>
+					<tags v-if="meta.tags && meta.tags.length" :dark="false" :tags="meta.tags" />
 				</v-tab-item>
 				<v-tab-item value="edits" v-if="meta.history && meta.history.length">
 					<div class="d-flex">
@@ -92,7 +93,6 @@
 			</v-tabs-items>
 
 			<div class="loc" v-if="loc"><v-icon small>mdi-map-marker</v-icon> {{ loc.lat }}, {{ loc.lon }}</div>
-			<tags v-if="tags.length" :dark="false" :tags="tags" />
 		</v-card-text>
 
 		<v-card-actions>
@@ -117,6 +117,7 @@
 </template>
 
 <script>
+import Tags from '~/components/tags'
 import Rating from '~/components/rating'
 import { parseISO, format } from 'date-fns'
 
@@ -125,8 +126,6 @@ export default {
 		name: {},
 		dir: {},
 		size: {}, // in bytes
-		rating: {},
-		tags: {}, // array of strings
 		meta: {}, //
 		loc: {}, // null or {lat:'', lon:''}
 		thumbs: {}, // full: { url: "...", width: n, height: n}
@@ -249,7 +248,7 @@ export default {
 			})
 		},
 	},
-	components: { Rating }
+	components: { Rating, Tags }
 }
 </script>
 

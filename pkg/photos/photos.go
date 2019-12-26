@@ -20,6 +20,7 @@ type Meta struct {
 	Creator         string                 `json:"creator,omitempty"`
 	History         []DTOperation          `json:"history,omitempty"`
 	Rights          string                 `json:"rights"`
+	Tags            []string               `json:"tags,omitempty"`
 	Title           string                 `json:"title,omitempty"`
 	EXIF            map[string]interface{} `json:"exif"`
 }
