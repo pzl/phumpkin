@@ -116,7 +116,7 @@ export default {
 			}
 			switch (this.meta.exif.Make) {
 				case 'SONY': return 'alpha'
-				case 'CANON': return 'alpha-c'
+				case 'Canon': return 'alpha-c'
 				case 'iPhone': return 'apple'
 			}
 		},
