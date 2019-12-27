@@ -33,7 +33,7 @@
 							<v-icon :title="'IS: '+meta.exif.ImageStabilization" small>mdi-vibrate{{ meta.exif.ImageStabilization.includes("On") ? '' : '-off' }}</v-icon>
 						</v-col>
 						<v-col cols="1" v-if="temp">
-							<v-icon :title="temp" small>mdi-thermometer</v-icon>
+							<v-icon :title="temp+ ' | '+tempF" small>mdi-thermometer</v-icon>
 						</v-col>
 						<v-col cols="1" v-if="meta.exif.FacesDetected">
 							<v-icon :title="meta.exif.FacesDetected" small>mdi-face-recognition</v-icon>
@@ -202,6 +202,12 @@ export default {
 					this.meta.exif.CameraTemperature ||
 					this.meta.exif.BatteryTemperature ||
 					null
+		},
+		tempF() {
+			if (!this.temp) {
+				return nill
+			}
+			return Math.round(parseInt(this.temp.replace(/[^\d]+/g,'')) * 9/5 + 32) + "F"
 		},
 		focus_icon() {
 			if (!this.meta || !this.meta.exif || !this.meta.exif.AFAreaMode) {
