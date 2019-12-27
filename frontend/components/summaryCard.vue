@@ -63,7 +63,7 @@
 							<v-chip :color="c.toLowerCase()" small></v-chip>
 						</v-col>
 					</v-row>
-					<tags v-if="meta.tags && meta.tags.length" :dark="false" :tags="meta.tags" />
+					<tag-crumbs v-if="meta.tags && meta.tags.length" :tags="meta.tags" />
 				</v-tab-item>
 				<v-tab-item value="edits" v-if="meta.history && meta.history.length">
 					<div class="d-flex">
@@ -117,7 +117,7 @@
 </template>
 
 <script>
-import Tags from '~/components/tags'
+import TagCrumbs from '~/components/tagCrumbs'
 import Rating from '~/components/rating'
 import { parseISO, format } from 'date-fns'
 
@@ -254,7 +254,7 @@ export default {
 			})
 		},
 	},
-	components: { Rating, Tags }
+	components: { Rating, TagCrumbs }
 }
 </script>
 
