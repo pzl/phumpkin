@@ -6,6 +6,7 @@
 				@click.stop="$emit('click', $event)"
 				:src="src"
 				:lazy-src="thumbs['x-small'].url"
+				:aspect-ratio="thumbs['large'].width/thumbs['large'].height"
 				v-ripple
 				>
 				<!-- 				:srcset="`
@@ -69,8 +70,6 @@ import Rating from '~/components/rating'
 import Tags from '~/components/tags'
 import { mapState, mapMutations, mapActions } from 'vuex'
 
-// color labels: Red, Yellow, Green, Blue, Purple
-
 export default {
 	props: {
 		index: {}, // not part of image, but it's place in the grid
@@ -78,6 +77,7 @@ export default {
 		dir: {},
 		size: {}, // in bytes
 		rating: {},
+		rotation: {}, // 0-7 int
 		tags: {}, // array of strings
 		meta: {}, //
 		loc: {}, // null or {lat:'', lon:''}

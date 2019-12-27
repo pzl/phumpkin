@@ -32,6 +32,7 @@ type FileInfo struct {
 	Name     string              `json:"name"`
 	Dir      bool                `json:"dir"`
 	Size     int64               `json:"size"`
+	Rotation int                 `json:"rotation"`
 	Meta     *photos.Meta        `json:"meta"`
 	Location *Location           `json:"loc"`
 	Thumbs   map[string]Resource `json:"thumbs"`
@@ -85,6 +86,30 @@ func (a Action) List(ctx context.Context, log logrus.FieldLogger, host string) (
 		w := int(fw)
 		h := int(fh)
 
+		// switch width and height if rotated
+		rotStrings := map[string]int{
+			"Horizontal (normal)":                 0,
+			"Mirror vertical":                     1,
+			"Mirror horizontal":                   2,
+			"Rotate 180":                          3,
+			"Mirror horizontal and rotate 270 CW": 4,
+			"Rotate 90 CW":                        5,
+			"Rotate 270 CW":                       6,
+			"Mirror horizontal and rotate 90 CW":  7,
+		}
+
+		rotation := 0
+		if v, ok := meta.EXIF["Orientation"]; ok {
+			if s, ok := v.(string); ok {
+				if rot, ok := rotStrings[s]; ok {
+					rotation = rot
+					if rot > 3 {
+						w, h = h, w
+					}
+				}
+			}
+		}
+
 		thumbs := make(map[string]Resource)
 		for _, s := range Sizes {
 			var rw int
@@ -115,6 +140,7 @@ func (a Action) List(ctx context.Context, log logrus.FieldLogger, host string) (
 			Dir:      fi.IsDir(),
 			Size:     fi.Size(),
 			Location: nil,
+			Rotation: rotation,
 			Meta:     &meta,
 			Original: Resource{
 				URL:    "http://" + host + "/api/v1/photos/" + path,
