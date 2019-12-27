@@ -73,7 +73,7 @@
 						<v-icon>mdi-information</v-icon>
 					</v-btn>
 				</template>
-				<v-btn icon>
+				<v-btn icon @click="view">
 					<v-icon>mdi-eye</v-icon>
 				</v-btn>
 				<v-btn icon>
@@ -145,6 +145,18 @@
 			</div>
 		</v-app-bar>
 
+		<v-overlay v-if="lightbox" :value="lightbox" z-index="99">
+			<v-sheet height="100%" width="100%">
+				<v-btn icon @click="lightbox = false"><v-icon>mdi-close</v-icon></v-btn>
+				<v-img v-if="selected.length === 1" :height="selected_image[0].thumbs['large'].height" :width="selected_image[0].thumbs['large'].width" :lazy-src="selected_image[0].thumbs['x-small'].url" :src="selected_image[0].thumbs['large'].url" />
+				<v-carousel v-else v-model="lightbox_position" show-arrows-on-hover height="100%" style="width: 100%">
+					<v-carousel-item v-for="(img,i) in selected_image" :key="i">
+						<v-img :height="img.thumbs['large'].height" :width="img.thumbs['large'].width" :lazy-src="img.thumbs['x-small'].url" :src="img.thumbs['large'].url" />
+					</v-carousel-item>
+				</v-carousel>
+			</v-sheet>
+		</v-overlay>
+
 		<scroll-up />
 
 		<v-content>
@@ -208,17 +220,16 @@ export default {
 				show: false,
 				message: '',
 				style: '',
-			}
+			},
+			lightbox: false,
+			lightbox_position: 0,
 		}
 	},
 	computed: {
 		anySelected() { return !!this.$store.state.images.selected.length },
 		navCollapsed() { return this.scrolled && !this.anySelected },
 		selected_image() {
-			if (this.selected.length === 1) {
-				return this.images[this.selected[0]]
-			}
-			return null
+			return this.selected.map(i => this.images[i])
 		},
 		...mapState('images', ['images','selected']),
 		...mapState('socket',['connected']),
@@ -228,11 +239,41 @@ export default {
 			if (typeof window === 'undefined') {
 				return
 			}
-
 			const top = ( window.pageYOffset || document.documentElement.offsetTop || 0)
 			this.scrolled = top > 0
 		},
 		reconnect() { this.$sock.reconnect() },
+		view() {
+			this.lightbox = true
+			this.lightbox_position = 0
+		},
+		closeView() {
+			this.lightbox = false
+			this.lightbox_position = 0
+		},
+		keyHandler(ev) {
+			if (!this.lightbox) {
+				switch (ev.keyCode) {
+					case 86:
+						if (this.anySelected) {
+							this.view()
+						}
+						break
+				}
+				return
+			}
+			switch (ev.keyCode) {
+				case 27: // esc
+					this.closeView()
+					break
+				case 37: // left
+					this.lightbox_position--
+					break
+				case 39: // right
+					this.lightbox_position++
+					break
+			}
+		},
 		...mapMutations('images', ['clearSelection']),
 		...mapActions('interface', ['setViewAs']),
 	},
@@ -245,6 +286,12 @@ export default {
 				this.toast.style = "error"
 			}
 		},
+	},
+	mounted() {
+		window.addEventListener('keydown', this.keyHandler)
+	},
+	destroyed() {
+		window.removeEventListener('keydown', this.keyHandler)
 	},
 	components: { scrollUp, Rating, Tags, SummaryCard }
 }
