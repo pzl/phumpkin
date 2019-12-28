@@ -1,12 +1,16 @@
 <template>
 	<v-hover v-slot:default="{ hover }" open-delay="50" close-delay="150">
-		<v-card :class="{ 'selected': isSelected }" :raised="isSelected" >
+		<v-card :class="{ 'selected': isSelected }" :raised="isSelected" class="my-1 mx-auto thumb-card" >
 			<v-img
 				class="thumby"
 				@click.stop="$emit('click', $event)"
 				:src="src"
 				:lazy-src="thumbs['x-small'].url"
 				:aspect-ratio="thumbs['large'].width/thumbs['large'].height"
+				:height="height"
+				:width="width"
+				max-width="100%"
+				contain
 				v-ripple
 				>
 				<!-- 				:srcset="`
@@ -37,7 +41,7 @@
 				</v-list>
 			</v-menu>
 
-			<v-expand-transition v-if="view_size > 1 || view_size === false">
+			<v-expand-transition v-if="scale > 0.18">
 				<v-container v-if="hover" class="transition-fast-in-fast-out black darken-2 v-card--reveal white--text hidden-sm-and-down" fluid>
 					<v-row dense class="d-flex justify-space-between align-center">
 						<div>{{ name }}</div>
@@ -100,21 +104,13 @@ export default {
 			return this.hover_reject ? 0 : this.meta.rating
 		},
 		src() {
-			let s = "medium"
-			switch (this.view_size) {
-				case 1:
-				case 2:
-				case 3:
-					s = "small"
-					break
-				case false:
-					s = "medium"
-					break
-				case 4:
-				case 6:
-				case 12:
-					s = "large"
-					break
+			let s = "small"
+
+			if (this.scale > 0.25) {
+				s = "medium"
+			}
+			if (this.scale > 1) {
+				s = "large"
 			}
 			return this.thumbs[s].url
 		},
@@ -126,8 +122,17 @@ export default {
 				}
 			}).sort((a,b) => a.width - b.width)
 		},
+		scale() {
+			return parseFloat(this.display_scale)
+		},
+		height() {
+			return this.thumbs['large'].height * this.scale
+		},
+		width() {
+			return this.thumbs['large'].width * this.scale
+		},
 		...mapState('images', ['selected']),
-		...mapState('interface', ['view_size']),
+		...mapState('interface', ['display_scale']),
 	},
 	methods: {
 		showMenu(e) {

@@ -2,6 +2,7 @@
 	<v-app v-scroll="onScroll">
 		<!--<v-system-bar app>Phumpkin</v-system-bar>-->
 
+		<!-- Side bar -->
 		<v-navigation-drawer app v-model="nav_vis">
 			<v-list-item>
 				<v-list-item-content>
@@ -30,7 +31,7 @@
 		</v-navigation-drawer>
 
 
-		<!--
+		<!-- Right side bar
 		<v-navigation-drawer app :clipped="!navCollapsed" :mini-variant.sync="toolbar_shrunk" expand-on-hover right v-model="toolbar_vis">
 			<v-list-item>
 				<v-list-item-icon>
@@ -57,12 +58,14 @@
 		</v-navigation-drawer>
 	-->
 
+		<!-- top bar -->
 		<v-app-bar app dense :collapse-on-scroll="!anySelected" :color="anySelected ? 'primary' : ''" :dark="anySelected" :clipped-right="!navCollapsed">
 			<v-app-bar-nav-icon @click.stop="nav_vis = !nav_vis" />
 			<v-toolbar-title>{{ anySelected ? `${selected.length} Selected` : 'Phumpkin' }}</v-toolbar-title>
 			<v-btn icon v-if="!connected" class="red--text" @click="reconnect">
 				<v-icon small>mdi-lan-disconnect</v-icon>
 			</v-btn>
+			<span>{{display_scale}}</span>
 			<v-spacer />
 			<template v-if="anySelected">
 				<v-btn icon @click="clearSelection">
@@ -87,22 +90,13 @@
 			<v-btn icon v-if="navCollapsed">
 				<v-icon>mdi-tools</v-icon>
 			</v-btn>
-			<v-menu offset-y>
+			<v-menu offset-y open-on-hover close-delay="300" :close-on-content-click="false">
 				<template v-slot:activator="{ on }">
 					<v-btn icon v-on="on" title="View Size">
 						<v-icon>mdi-apps</v-icon>
 					</v-btn>
 				</template>
-				<v-list dense>
-					<v-list-item v-for="(sz, i) in view_sizes" :key="i" @click="setViewAs(sz.size)">
-						<v-list-item-content>
-							<v-list-item-title v-text="sz.size"></v-list-item-title>
-						</v-list-item-content>
-						<v-list-item-icon>
-							<v-icon v-text="sz.icon"></v-icon>
-						</v-list-item-icon>
-					</v-list-item>
-				</v-list>
+				<v-slider :value="display_scale" @input="scale" hint="Size" dense max="2" min="0.03" step="0.01" vertical hide-details :background-color="bg" />
 			</v-menu>
 			<v-menu offset-y>
 				<template v-slot:activator="{ on }">
@@ -231,8 +225,10 @@ export default {
 		selected_image() {
 			return this.selected.map(i => this.images[i])
 		},
+		bg() { return (this.$vuetify.theme.dark) ? '#424242' : '#fafafa' },
 		...mapState('images', ['images','selected']),
 		...mapState('socket',['connected']),
+		...mapState('interface', ['display_scale']),
 	},
 	methods: {
 		onScroll() {
@@ -275,7 +271,7 @@ export default {
 			}
 		},
 		...mapMutations('images', ['clearSelection']),
-		...mapActions('interface', ['setViewAs']),
+		...mapMutations('interface', ['scale']),
 	},
 	watch: {
 		darkness(val) { this.$vuetify.theme.dark = val },
