@@ -8,6 +8,7 @@
 				:index="i"
 				@click="onClick(i, $event)"
 			/>
+			<span class="ender" v-intersect="{ handler: intersect, options: { threshold: [0,1] }}"></span>
 		</v-row>
 	</v-container>
 </template>
@@ -19,12 +20,12 @@ import { mapState, mapMutations, mapActions } from 'vuex'
 export default {
 	data() {
 		return {
-
+			max: 30
 		}
 	},
 	computed: {
 		filtered() {
-			return this.images.slice(0,30)
+			return this.images.slice(0,this.max)
 		},
 		...mapState('images', ['images', 'selected', 'loading']),
 	},
@@ -60,6 +61,13 @@ export default {
 				this.setSelection(img)
 
 			}
+		},
+		intersect(entries, observer, isIntersecting) {
+			if (!isIntersecting) {
+				return false
+			}
+			console.log("scrolled to end. loading more")
+			this.max += 30
 		},
 		...mapMutations('images', ['clearSelection']),
 		...mapActions('images', ['toggleSelect', 'setSelection', 'addSelection', 'loadImages']),
