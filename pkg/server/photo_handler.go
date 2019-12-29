@@ -173,10 +173,7 @@ func (ph *PhotoHandler) Websocket(w http.ResponseWriter, r *http.Request) {
 					sr.Size = ss
 				}
 			}
-			if b64, ok := req.Params["b64"]; !ok {
-				resp.Error = "missing b64 argument"
-				break
-			} else {
+			if b64, ok := req.Params["b64"]; ok {
 				switch v := b64.(type) {
 				case bool:
 					sr.B64 = v
