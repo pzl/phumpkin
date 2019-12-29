@@ -18,9 +18,7 @@ type PhotoHandler struct {
 }
 
 func (ph *PhotoHandler) List(w http.ResponseWriter, r *http.Request) {
-	log := logger.GetLog(r)
-
-	photos, err := ph.s.actions.List(r.Context(), log, r.Host)
+	photos, err := ph.s.actions.List(FromRequest(r))
 	if err != nil {
 		writeErr(w, http.StatusInternalServerError, err)
 		return
@@ -66,8 +64,13 @@ func (ph *PhotoHandler) GetThumb(w http.ResponseWriter, r *http.Request) {
 	if len(matches) > 2 {
 		log.WithField("matches", matches).Warnf("found %d source matches!", len(matches))
 	}
+	s := SizeReq{
+		File: strings.TrimPrefix(matches[0], ph.s.photoDir+"/"),
+		Size: size,
+		B64:  false,
+	}
 
-	if _, err := ph.s.actions.GetSize(r.Context(), log, strings.TrimPrefix(matches[0], ph.s.photoDir+"/"), size, false, r.Host); err != nil {
+	if _, err := ph.s.actions.GetSize(FromRequest(r), s); err != nil {
 		log.WithError(err).Error("error getting image at size")
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -138,7 +141,7 @@ func (ph *PhotoHandler) Websocket(w http.ResponseWriter, r *http.Request) {
 		switch req.Action {
 		case "list", "List":
 			log.WithField("request", req).Trace("parsed as list request action")
-			photos, err := ph.s.actions.List(r.Context(), log, r.Host)
+			photos, err := ph.s.actions.List(FromRequest(r))
 			if err != nil {
 				resp.Error = err.Error()
 			} else {
@@ -147,40 +150,46 @@ func (ph *PhotoHandler) Websocket(w http.ResponseWriter, r *http.Request) {
 			log.WithField("resp", resp).Trace("responding to list request")
 		case "size", "Size":
 			log.WithField("request", req).Trace("parsed size request action")
-			if _, ok := req.Params["file"]; !ok {
+			sr := SizeReq{}
+			if f, ok := req.Params["file"]; !ok {
 				resp.Error = "missing file argument"
 				break
+			} else {
+				if fs, ok := f.(string); !ok {
+					resp.Error = "file expected to be a string"
+					break
+				} else {
+					sr.File = fs
+				}
 			}
-			if _, ok := req.Params["size"]; !ok {
+			if sz, ok := req.Params["size"]; !ok {
 				resp.Error = "missing size argument"
 				break
+			} else {
+				if ss, ok := sz.(string); !ok {
+					resp.Error = "size expected to be a string"
+					break
+				} else {
+					sr.Size = ss
+				}
 			}
-			if _, ok := req.Params["b64"]; !ok {
+			if b64, ok := req.Params["b64"]; !ok {
 				resp.Error = "missing b64 argument"
 				break
+			} else {
+				switch v := b64.(type) {
+				case bool:
+					sr.B64 = v
+				case int:
+					sr.B64 = v == 1
+				case string:
+					sr.B64 = v == "1" || v == "true"
+				default:
+					sr.B64 = false
+				}
 			}
-			file, ok := req.Params["file"].(string)
-			if !ok {
-				resp.Error = "file expected to be a string"
-				break
-			}
-			size, ok := req.Params["size"].(string)
-			if !ok {
-				resp.Error = "size expected to be a string"
-				break
-			}
-			var b64 bool
-			switch v := req.Params["b64"].(type) {
-			case bool:
-				b64 = v
-			case int:
-				b64 = v == 1
-			case string:
-				b64 = v == "1" || v == "true"
-			default:
-				b64 = false
-			}
-			data, err := ph.s.actions.GetSize(r.Context(), log, file, size, b64, r.Host)
+
+			data, err := ph.s.actions.GetSize(FromRequest(r), sr)
 			if err != nil {
 				resp.Error = err.Error()
 				break
