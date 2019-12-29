@@ -249,11 +249,8 @@ func (a Action) GetSize(r Request, sr SizeReq) (string, error) {
 			opts = append(opts, darktable.SetXMP(xmp))
 		}
 
-		job, err := a.s.darktable.Immediate(src, thumbpath, Px(sr.Size), opts...)
-		if err != nil {
-			l.WithError(err).Error("error starting job")
-			return "", err
-		}
+		job := a.s.darktable.CreateJob(src, thumbpath, Px(sr.Size), opts...)
+		a.s.darktable.Add(job, darktable.PR_NORMAL)
 		select {
 		case <-job.Done:
 			l.Trace("thumb generation job complete")

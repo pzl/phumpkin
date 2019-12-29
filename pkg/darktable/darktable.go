@@ -14,7 +14,7 @@ type Job struct {
 	ctx      context.Context
 	Cancel   func()
 	Done     chan struct{}
-	priority int
+	priority Priority
 	size     int
 	source   string
 	xmp      string
@@ -30,16 +30,18 @@ func SetXMP(xmp string) JobOpt { return func(j *Job) { j.xmp = xmp } }
 type Exporter struct {
 	ctx  context.Context
 	stop func()
+	add  chan Job
 	next chan Job
 	Log  *logrus.Logger
-	q    []Job //@todo -- needs to be synchronized between processor thread and adder thread
+	q    []Job
 }
 
 func New() *Exporter {
 	return &Exporter{
 		ctx:  context.Background(),
 		q:    make([]Job, 0, 50),
-		next: make(chan Job, 600),
+		add:  make(chan Job, 30), // put new jobs on the queue
+		next: make(chan Job),     // next job to be done
 	}
 }
 
@@ -47,51 +49,56 @@ func (e *Exporter) Start(ctx context.Context) {
 	e.ctx, e.stop = context.WithCancel(ctx)
 	e.Log.Info("beginning darktable process loop")
 	go e.Process()
+	go e.sort()
 }
 
-// add a thumbnail request to the queue
-// to be done in priority order
-func (e *Exporter) Add() error {
-	return nil
-}
-
-// force immediate generation of request, skipping queue
-// returns Done channel
-func (e *Exporter) Immediate(src string, dest string, px int, opts ...JobOpt) (Job, error) {
+func (e *Exporter) CreateJob(src string, dest string, px int, opts ...JobOpt) Job {
 	l := e.Log.WithFields(logrus.Fields{
 		"src":  src,
 		"opts": opts,
 		"dest": dest,
 		"px":   px,
 	})
-	l.Trace("creating immediate darktable job")
+	l.Trace("creating darktable job instance")
 	ctx, cancel := context.WithCancel(e.ctx)
-	done := make(chan struct{})
-
 	j := Job{
-		ctx:      ctx,
-		Cancel:   cancel,
-		Done:     done,
-		priority: 100,
-		size:     px,
-		source:   src,
-		dest:     dest,
-		xmp:      "",
-		hq:       false,
+		ctx:    ctx,
+		Cancel: cancel,
+		Done:   make(chan struct{}),
+		size:   px,
+		source: src,
+		dest:   dest,
+		xmp:    "",
+		hq:     false,
 	}
 	for _, o := range opts {
 		if o != nil {
 			o(&j)
 		}
 	}
+	return j
+}
 
-	e.next <- j
+type Priority int
 
-	return j, nil
+const (
+	PR_LOW       Priority = 10
+	PR_NORMAL    Priority = 50
+	PR_HIGH      Priority = 70
+	PR_IMMEDIATE Priority = 100
+)
+
+// add a thumbnail request to the queue
+// to be done in priority order
+func (e *Exporter) Add(j Job, p Priority) {
+	j.priority = p
+	e.Log.WithField("job", j).Trace("adding job to queue")
+	e.add <- j
 }
 
 // empty the queue
 func (e *Exporter) Clear() error {
+
 	return nil
 
 	// should this cancel an in-flight generation? separate call for that?
@@ -103,6 +110,41 @@ func (e *Exporter) Halt() {
 	}
 }
 
+// this is the only place e.q is allowed to be touched
+func (e *Exporter) sort() {
+	for {
+		select {
+		case <-e.ctx.Done():
+			e.Log.Info("darktable context done. Exiting queue sorter")
+			return
+		case job := <-e.add:
+			e.q = append(e.q, job)
+		default:
+			// if there is no queue, wait for an addition instead of churning through this loop
+			// and hitting default all the time
+			if len(e.q) == 0 {
+				job := <-e.add
+				e.q = append(e.q, job)
+			}
+
+			// otherwise send a job
+			priority := Priority(-1)
+			idx := 0
+			for i, j := range e.q {
+				if j.priority > priority {
+					idx = i
+					priority = j.priority
+				}
+			}
+			e.next <- e.q[idx]
+			// and now remove it
+			copy(e.q[idx:], e.q[idx+1:])
+			e.q[len(e.q)-1] = Job{} // erase with empty value
+			e.q = e.q[:len(e.q)-1]
+		}
+	}
+}
+
 // @todo: contexts and cancellations in the queue
 // @todo: status and progress
 
@@ -110,10 +152,10 @@ func (e *Exporter) Process() {
 	for {
 		select {
 		case <-e.ctx.Done():
-			e.Log.Info("darktable process loop cancelled. exiting")
+			e.Log.Info("darktable context done. Exiting process loop")
 			return
 		case job := <-e.next:
-			e.Log.WithField("dst", job.dest).Debug("pulling job to process")
+			e.Log.WithField("dst", job.dest).WithField("priority", job.priority).Debug("pulling job to process")
 			e.do(job)
 			job.Done <- struct{}{}
 		}
