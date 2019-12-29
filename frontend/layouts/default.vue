@@ -142,10 +142,10 @@
 		<v-overlay v-if="lightbox" :value="lightbox" z-index="99">
 			<v-sheet height="100%" width="100%">
 				<v-btn icon @click="lightbox = false"><v-icon>mdi-close</v-icon></v-btn>
-				<v-img v-if="selected.length === 1" :height="selected_image[0].thumbs['large'].height" :width="selected_image[0].thumbs['large'].width" :lazy-src="selected_image[0].thumbs['x-small'].url" :src="selected_image[0].thumbs['large'].url" />
+				<v-img v-if="selected.length === 1" :height="selected_image[0].thumbs['large'].height" :width="selected_image[0].thumbs['large'].width" :lazy-src="selected_image[0].thumbs['x-small'].url+'?purpose=lazysrc'" :src="selected_image[0].thumbs['large'].url+'?purpose=viewer'" />
 				<v-carousel v-else v-model="lightbox_position" show-arrows-on-hover height="100%" style="width: 100%">
 					<v-carousel-item v-for="(img,i) in selected_image" :key="i">
-						<v-img :height="img.thumbs['large'].height" :width="img.thumbs['large'].width" :lazy-src="img.thumbs['x-small'].url" :src="img.thumbs['large'].url" />
+						<v-img :height="img.thumbs['large'].height" :width="img.thumbs['large'].width" :lazy-src="img.thumbs['x-small'].url+'?purpose=lazysrc'" :src="img.thumbs['large'].url+'?purpose=viewer'" />
 					</v-carousel-item>
 				</v-carousel>
 			</v-sheet>

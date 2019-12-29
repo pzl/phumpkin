@@ -5,7 +5,7 @@
 				class="thumby"
 				@click.stop="$emit('click', $event)"
 				:src="src"
-				:lazy-src="thumbs['x-small'].url"
+				:lazy-src="thumbs['x-small'].url + '?purpose=lazysrc'"
 				:aspect-ratio="thumbs['large'].width/thumbs['large'].height"
 				:height="height"
 				:width="width"

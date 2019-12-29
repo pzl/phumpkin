@@ -182,9 +182,10 @@ func (a Action) List(r Request) ([]FileInfo, error) {
 }
 
 type SizeReq struct {
-	File string
-	Size string
-	B64  bool
+	File    string
+	Size    string
+	B64     bool
+	Purpose string
 }
 
 func (a Action) GetSize(r Request, sr SizeReq) (string, error) {
@@ -250,7 +251,14 @@ func (a Action) GetSize(r Request, sr SizeReq) (string, error) {
 		}
 
 		job := a.s.darktable.CreateJob(src, thumbpath, Px(sr.Size), opts...)
-		a.s.darktable.Add(job, darktable.PR_NORMAL)
+		priority := darktable.PR_NORMAL
+		switch sr.Purpose {
+		case "lazysrc":
+			priority = darktable.PR_HIGH
+		case "viewer":
+			priority = darktable.PR_IMMEDIATE
+		}
+		a.s.darktable.Add(job, priority)
 		select {
 		case <-job.Done:
 			l.Trace("thumb generation job complete")

@@ -65,9 +65,10 @@ func (ph *PhotoHandler) GetThumb(w http.ResponseWriter, r *http.Request) {
 		log.WithField("matches", matches).Warnf("found %d source matches!", len(matches))
 	}
 	s := SizeReq{
-		File: strings.TrimPrefix(matches[0], ph.s.photoDir+"/"),
-		Size: size,
-		B64:  false,
+		File:    strings.TrimPrefix(matches[0], ph.s.photoDir+"/"),
+		Size:    size,
+		B64:     false,
+		Purpose: r.URL.Query().Get("purpose"),
 	}
 
 	if _, err := ph.s.actions.GetSize(FromRequest(r), s); err != nil {
@@ -184,6 +185,14 @@ func (ph *PhotoHandler) Websocket(w http.ResponseWriter, r *http.Request) {
 				default:
 					sr.B64 = false
 				}
+			}
+			if purpose, ok := req.Params["purpose"]; ok {
+				ps, ok := purpose.(string)
+				if !ok {
+					resp.Error = "purpose expected to be a string"
+					break
+				}
+				sr.Purpose = ps
 			}
 
 			data, err := ph.s.actions.GetSize(FromRequest(r), sr)
