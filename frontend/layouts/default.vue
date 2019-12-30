@@ -60,7 +60,9 @@
 
 		<!-- top bar -->
 		<v-app-bar app dense :collapse-on-scroll="!anySelected" :color="anySelected ? 'primary' : ''" :dark="anySelected" :clipped-right="!navCollapsed">
-			<v-app-bar-nav-icon @click.stop="nav_vis = !nav_vis" />
+			<v-app-bar-nav-icon @click.stop="nav_vis = !nav_vis">
+				<v-icon>mdi-chevron-{{ nav_vis ? 'left' : 'right' }}</v-icon>
+			</v-app-bar-nav-icon>
 			<v-toolbar-title>{{ anySelected ? `${selected.length} Selected` : 'Phumpkin' }}</v-toolbar-title>
 			<v-btn icon v-if="!connected" class="red--text" @click="reconnect">
 				<v-icon small>mdi-lan-disconnect</v-icon>
