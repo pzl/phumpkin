@@ -7,7 +7,9 @@
 				:index="i"
 				@click="onClick(i, $event)"
 			/>
-			<v-progress-circular indeterminate v-if="loading" class="py-12 mx-auto" color="deep-orange lighten-2" />
+			<div v-if="loading" class="my-12 d-flex" style="flex-basis: 100%">
+				<v-progress-circular indeterminate class="mx-auto" color="deep-orange lighten-2" />
+			</div>
 			<span v-else class="ender" v-intersect="{ handler: intersect, options: { threshold: [0,1] }}"></span>
 			<div v-if="err" class="my-12 d-flex" style="flex-basis: 100%">
 				<v-btn icon class="mx-auto error--text" x-large @click="loadImages">
