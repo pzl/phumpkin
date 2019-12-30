@@ -1,6 +1,8 @@
 <template>
 	<v-container fluid class="d-flex">
 		<v-row justify="space-between" align="start" style="max-width: 100%">
+			<directory v-for="(d,i) in dirs" :key="d+i" :name="d" />
+			<div style="flex-basis: 100%"></div>
 			<thumb
 				v-for="(img, i) in images" :key="i"
 				v-bind="img"
@@ -22,6 +24,7 @@
 
 <script>
 import Thumb from '~/components/thumb'
+import Directory from '~/components/directory'
 import { mapState, mapMutations, mapActions } from 'vuex'
 
 export default {
@@ -30,7 +33,7 @@ export default {
 		}
 	},
 	computed: {
-		...mapState('images', ['images', 'selected', 'loading', 'err']),
+		...mapState('images', ['images', 'dirs', 'selected', 'loading', 'err']),
 	},
 	methods: {
 		onClick(img, e) {
@@ -84,7 +87,7 @@ export default {
 	mounted() {
 		this.loadImages()
 	},
-	components: { Thumb }
+	components: { Thumb, Directory }
 }
 </script>
 

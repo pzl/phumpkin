@@ -40,7 +40,7 @@ func (ph *PhotoHandler) List(w http.ResponseWriter, r *http.Request) {
 	if s := r.URL.Query().Get("sort"); s != "" {
 		sort = s
 	}
-	photos, err := ph.s.actions.List(FromRequest(r), ListReq{
+	photos, dirs, err := ph.s.actions.List(FromRequest(r), ListReq{
 		Offset: offset,
 		Count:  count,
 		Asc:    ascending,
@@ -52,7 +52,8 @@ func (ph *PhotoHandler) List(w http.ResponseWriter, r *http.Request) {
 	}
 	writeJSON(w, r, struct {
 		Photos []FileInfo `json:"photos"`
-	}{photos})
+		Dirs   []string   `json:"dirs"`
+	}{photos, dirs})
 }
 
 func (ph *PhotoHandler) Get(w http.ResponseWriter, r *http.Request) {
@@ -206,7 +207,7 @@ func (ph *PhotoHandler) Websocket(w http.ResponseWriter, r *http.Request) {
 					break
 				}
 			}
-			photos, err := ph.s.actions.List(FromRequest(r), ListReq{
+			photos, dirs, err := ph.s.actions.List(FromRequest(r), ListReq{
 				Offset: offset,
 				Count:  count,
 				Asc:    ascending,
@@ -215,7 +216,10 @@ func (ph *PhotoHandler) Websocket(w http.ResponseWriter, r *http.Request) {
 			if err != nil {
 				resp.Error = err.Error()
 			} else {
-				resp.Data = photos
+				resp.Data = map[string]interface{}{
+					"photos": photos,
+					"dirs":   dirs,
+				}
 			}
 			log.WithField("resp", resp).Trace("responding to list request")
 		case "size", "Size":

@@ -33,8 +33,8 @@ type Resource struct {
 }
 type FileInfo struct {
 	Name     string              `json:"name"`
-	Dir      bool                `json:"dir"`
 	Size     int64               `json:"size"`
+	Dir      bool                `json:"-"`
 	Rotation int                 `json:"rotation"`
 	Meta     *photos.Meta        `json:"meta"`
 	Location *Location           `json:"loc"`
@@ -65,14 +65,20 @@ type ListReq struct {
 
 // @todo: duplicates by XMP
 // primary may be <IMG>.ARW.xmp and dupe may be <IMG>_nn.ARW.XMP
-func (a Action) List(r Request, lr ListReq) ([]FileInfo, error) {
+func (a Action) List(r Request, lr ListReq) ([]FileInfo, []string, error) {
 	files := make([]FileInfo, 0, 300)
+	dirs := make([]string, 0, 20)
 	found := make(chan FileInfo)
 	done := make(chan struct{})
 
 	go func() {
 		for f := range found {
-			r.Log.WithField("name", f).Trace("received file")
+			if f.Dir {
+				dirs = append(dirs, f.Name)
+				r.Log.WithField("name", f.Name).Trace("received dir")
+				continue
+			}
+			r.Log.WithField("name", f.Name).Trace("received file")
 			files = append(files, f)
 		}
 		done <- struct{}{}
@@ -85,13 +91,17 @@ func (a Action) List(r Request, lr ListReq) ([]FileInfo, error) {
 		if name == a.s.photoDir {
 			return nil
 		}
-		if fi.IsDir() { // recurse into dirs, but ignore folder entries themselves
-			return nil //filepath.SkipDir
-		}
 		if strings.HasSuffix(name, ".xmp") {
 			return nil
 		}
 		relpath := strings.TrimPrefix(name, a.s.photoDir+"/")
+		if fi.IsDir() { // recurse into dirs, but ignore folder entries themselves
+			found <- FileInfo{
+				Name: relpath,
+				Dir:  true,
+			}
+			return nil
+		}
 
 		meta, err := a.s.mgr.Load(r.Log, relpath)
 		if err != nil {
@@ -161,7 +171,7 @@ func (a Action) List(r Request, lr ListReq) ([]FileInfo, error) {
 
 		found <- FileInfo{
 			Name:     relpath,
-			Dir:      fi.IsDir(),
+			Dir:      false,
 			Size:     fi.Size(),
 			Location: nil,
 			Rotation: rotation,
@@ -182,7 +192,7 @@ func (a Action) List(r Request, lr ListReq) ([]FileInfo, error) {
 	close(found)
 
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	<-done
@@ -230,7 +240,7 @@ func (a Action) List(r Request, lr ListReq) ([]FileInfo, error) {
 		lr.Offset = 0
 	}
 
-	return files[lr.Offset : lr.Offset+lr.Count], nil
+	return files[lr.Offset : lr.Offset+lr.Count], dirs, nil
 }
 
 type SizeReq struct {

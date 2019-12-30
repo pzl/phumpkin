@@ -2,6 +2,7 @@ import Vue from 'vue'
 
 export const state = () => ({
 	images:[],
+	dirs: [],
 	selected: [],
 	loading: false,
 	err: false,
@@ -16,6 +17,7 @@ export const mutations = {
 	clearErr(state) { state.err = false },
 	addImages(state, images) { state.images.push(...images) },
 	setImages(state,images) { state.images = images },
+	setDirs(state, dirs) { state.dirs = dirs },
 	clearImages(state) { state.images = [] },
 	clearSelection (state) { state.selected = [] },
 	select (state, image) { state.selected.push(image) },
@@ -49,7 +51,8 @@ export const actions = {
 					}
 				})
 				.then(data => {
-					commit('addImages', data)
+					commit('addImages', data.photos)
+					commit('setDirs', data.dirs)
 				})
 				.catch(error => {
 					console.log('sock error: ')
@@ -65,6 +68,7 @@ export const actions = {
 				// @todo: replace with location.origin + "/api.."
 				const response = await this.$axios.$get("http://localhost:6001/api/v1/photos?count=30&offset="+(state.images.length||0)+"&sort="+state.sort+"&sort_dir="+(state.sort_asc ? 'asc' : 'desc'))
 				commit('addImages', response.photos)
+				commit('setDirs', response.dirs)
 			} catch (error) {
 				// oh no
 				console.log("http error: ")
