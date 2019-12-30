@@ -35,18 +35,15 @@ export const actions = {
 		commit('startLoading')
 
 		if (this.$sock.connected()) {
-			const cmd = {
-				action:"list",
-				params: {
-					offset: state.images.length,
-					count: 10,
-					sort: state.sort,
-					sort_dir: state.sort_asc ? 'asc' : 'desc',
-				}
-			}
-			console.log('sending load cmd: ',cmd)
-
-			this.$sock.send(cmd)
+			this.$sock.send({
+					action:"list",
+					params: {
+						offset: state.images.length,
+						count: 10,
+						sort: state.sort,
+						sort_dir: state.sort_asc ? 'asc' : 'desc',
+					}
+				})
 				.then(data => {
 					commit('addImages', data)
 				})

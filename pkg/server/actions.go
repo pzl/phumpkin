@@ -189,6 +189,7 @@ func (a Action) List(r Request, lr ListReq) ([]FileInfo, error) {
 
 	if lr.Sort != "" {
 		sort.SliceStable(files, func(i, j int) bool {
+			// @todo: give frontend more control in here with an embedded execution string. JS or lua, etc
 			switch strings.ToLower(lr.Sort) {
 			case "name":
 				if lr.Asc {
