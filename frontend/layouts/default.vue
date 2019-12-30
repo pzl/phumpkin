@@ -79,10 +79,10 @@
 				<v-btn icon @click="view">
 					<v-icon>mdi-eye</v-icon>
 				</v-btn>
-				<v-btn icon>
+				<v-btn icon disabled>
 					<v-icon>mdi-download</v-icon>
 				</v-btn>
-				<v-btn icon>
+				<v-btn icon disabled>
 					<v-icon>mdi-dots-vertical</v-icon>
 				</v-btn>
 				<v-spacer />
@@ -120,18 +120,18 @@
 			<v-btn icon @click="flipSortDir" small title="Sort Direction">
 				<v-icon>mdi-sort-{{ sort_asc ? 'a' : 'de' }}scending</v-icon>
 			</v-btn>
-			<v-btn icon title="Filter">
+			<v-btn icon title="Filter" disabled>
 				<v-icon>mdi-filter</v-icon>
 			</v-btn>
 
 			<div class="mb-n7 search-hider" :class="{ collapsed: !show_search }" >
-				<v-text-field rounded single-line clearable dense solo filled prepend-icon="mdi-magnify" @click:prepend="show_search = !show_search">
+				<v-text-field rounded single-line clearable dense solo filled prepend-icon="mdi-magnify" @click:prepend="show_search = !show_search" disabled>
 					<template v-slot:label>
 						Find images <v-icon style="vertical-align: middle;">mdi-magnify</v-icon>
 					</template>
 				</v-text-field>
 			</div>
-			<v-btn icon title="Upload">
+			<v-btn icon title="Upload" disabled>
 				<v-icon>mdi-upload</v-icon>
 			</v-btn>
 			<div>
