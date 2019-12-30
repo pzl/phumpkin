@@ -3,7 +3,8 @@
 		<v-card :class="{ 'selected': isSelected }" :raised="isSelected" class="my-1 mx-auto thumb-card" >
 			<v-img
 				class="thumby"
-				@click.stop="$emit('click', $event)"
+				@click="onClick"
+				@error="error"
 				:src="src"
 				:lazy-src="thumbs['x-small'].url + '?purpose=lazysrc'"
 				:aspect-ratio="thumbs['large'].width/thumbs['large'].height"
@@ -23,7 +24,10 @@
 				-->
 				<template v-slot:placeholder>
 					<v-row class="fill-height ma-0" align="center" justify="center">
-						<v-progress-circular indeterminate color="grey lighten-5"></v-progress-circular>
+						<v-lazy> <!-- prevent all below-fold images from spiraling forever and wasting cpu -->
+							<v-progress-circular indeterminate v-if="!hasErr" color="grey lighten-5"></v-progress-circular>
+							<v-icon v-else class="error--text" large>mdi-alert-outline</v-icon>
+						</v-lazy>
 					</v-row>
 				</template>
 			</v-img>
@@ -94,6 +98,8 @@ export default {
 			menu: false,
 			menu_x: 0,
 			menu_y: 0,
+			hasErr: false,
+			srcOverride: false,
 		}
 	},
 	computed: {
@@ -104,6 +110,9 @@ export default {
 			return this.hover_reject ? 0 : this.meta.rating
 		},
 		src() {
+			if (this.srcOverride) {
+				return ""
+			}
 			let s = "small"
 
 			if (this.scale > 0.25) {
@@ -144,6 +153,27 @@ export default {
 			this.$nextTick(() => {
 				this.menu = true
 			})
+		},
+		error(e) {
+			if (this.src == "") {
+				return
+			}
+			this.hasErr = true
+		},
+		onClick(e) {
+			e.preventDefault()
+			if (this.hasErr) {
+				this.reload()
+				return
+			}
+			this.$emit('click', e)
+		},
+		reload() {
+			this.srcOverride = true
+			this.hasErr = false
+			setTimeout(() => {
+				this.srcOverride = false
+			}, 2)
 		},
 		...mapMutations('images', ['rate']),
 	},
