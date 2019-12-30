@@ -4,6 +4,7 @@ export const state = () => ({
 	images:[],
 	selected: [],
 	loading: false,
+	err: false,
 	sort: 'name',
 	sort_asc: true,
 })
@@ -11,6 +12,8 @@ export const state = () => ({
 export const mutations = {
 	startLoading (state) { state.loading = true },
 	stopLoading (state) { state.loading = false },
+	errorLoading(state) { state.err = true },
+	clearErr(state) { state.err = false },
 	addImages(state, images) { state.images.push(...images) },
 	setImages(state,images) { state.images = images },
 	clearImages(state) { state.images = [] },
@@ -33,6 +36,7 @@ export const mutations = {
 export const actions = {
 	async loadImages({ commit, state }) {
 		commit('startLoading')
+		commit('clearErr')
 
 		if (this.$sock.connected()) {
 			this.$sock.send({
@@ -50,6 +54,7 @@ export const actions = {
 				.catch(error => {
 					console.log('sock error: ')
 					console.log(error)
+					commit('errorLoading')
 				})
 				.finally(() => {
 					commit('stopLoading')
@@ -64,6 +69,7 @@ export const actions = {
 				// oh no
 				console.log("http error: ")
 				console.log(error)
+				commit('errorLoading')
 			}
 			commit('stopLoading')
 		}

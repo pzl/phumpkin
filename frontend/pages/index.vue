@@ -9,6 +9,11 @@
 			/>
 			<v-progress-circular indeterminate v-if="loading" class="py-12 mx-auto" color="deep-orange lighten-2" />
 			<span v-else class="ender" v-intersect="{ handler: intersect, options: { threshold: [0,1] }}"></span>
+			<div v-if="err" class="my-12 d-flex" style="flex-basis: 100%">
+				<v-btn icon class="mx-auto error--text" x-large @click="loadImages">
+					<v-icon x-large>mdi-reload-alert</v-icon>
+				</v-btn>
+			</div>
 		</v-row>
 	</v-container>
 </template>
@@ -23,7 +28,7 @@ export default {
 		}
 	},
 	computed: {
-		...mapState('images', ['images', 'selected', 'loading']),
+		...mapState('images', ['images', 'selected', 'loading', 'err']),
 	},
 	methods: {
 		onClick(img, e) {
@@ -63,6 +68,9 @@ export default {
 				return false
 			}
 			if (this.loading) {
+				return false
+			}
+			if (this.err) {
 				return false
 			}
 			console.log("scrolled to end. loading more")
