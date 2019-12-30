@@ -106,7 +106,7 @@
 				</template>
 				<v-list dense>
 					<v-list-item-group v-model="sort_by">
-						<v-list-item v-for="(sort, i) in sortables" :key="i" @click="">
+						<v-list-item v-for="(sort, i) in sortables" :key="i" @click="sort_change(sort.text)">
 							<v-list-item-content>
 								<v-list-item-title v-text="sort.text"></v-list-item-title>
 							</v-list-item-content>
@@ -117,7 +117,7 @@
 					</v-list-item-group>
 				</v-list>
 			</v-menu>
-			<v-btn icon @click="sort_asc = !sort_asc" small title="Sort Direction">
+			<v-btn icon @click="flipSortDir" small title="Sort Direction">
 				<v-icon>mdi-sort-{{ sort_asc ? 'a' : 'de' }}scending</v-icon>
 			</v-btn>
 			<v-btn icon title="Filter">
@@ -207,7 +207,6 @@ export default {
 				{ text: 'Name', icon: 'mdi-sort-alphabetical' },
 			],
 			sort_by: 0,
-			sort_asc: true,
 			show_search: false,
 			scrolled: false,
 			toast: {
@@ -226,7 +225,7 @@ export default {
 			return this.selected.map(i => this.images[i])
 		},
 		bg() { return (this.$vuetify.theme.dark) ? '#424242' : '#fafafa' },
-		...mapState('images', ['images','selected']),
+		...mapState('images', ['images','selected','sort','sort_asc']),
 		...mapState('socket',['connected']),
 		...mapState('interface', ['display_scale']),
 	},
@@ -246,6 +245,14 @@ export default {
 		closeView() {
 			this.lightbox = false
 			this.lightbox_position = 0
+		},
+		sort_change(v) {
+			this.sortBy(v)
+			this.resetImages()
+		},
+		flipSortDir() {
+			this.sortDir(!this.sort_asc)
+			this.resetImages()
 		},
 		keyHandler(ev) {
 			if (!this.lightbox) {
@@ -270,8 +277,9 @@ export default {
 					break
 			}
 		},
-		...mapMutations('images', ['clearSelection']),
+		...mapMutations('images', ['clearSelection', 'sortBy', 'sortDir']),
 		...mapMutations('interface', ['scale']),
+		...mapActions('images', ['resetImages'])
 	},
 	watch: {
 		darkness(val) { this.$vuetify.theme.dark = val },

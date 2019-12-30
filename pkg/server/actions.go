@@ -7,6 +7,7 @@ import (
 	"io/ioutil"
 	"net/http"
 	"os"
+	"sort"
 	"strings"
 	"time"
 
@@ -55,9 +56,16 @@ func FromRequest(r *http.Request) Request {
 	}
 }
 
+type ListReq struct {
+	Offset int
+	Count  int
+	Sort   string
+	Asc    bool
+}
+
 // @todo: duplicates by XMP
 // primary may be <IMG>.ARW.xmp and dupe may be <IMG>_nn.ARW.XMP
-func (a Action) List(r Request) ([]FileInfo, error) {
+func (a Action) List(r Request, lr ListReq) ([]FileInfo, error) {
 	files := make([]FileInfo, 0, 300)
 	found := make(chan FileInfo)
 	done := make(chan struct{})
@@ -178,7 +186,50 @@ func (a Action) List(r Request) ([]FileInfo, error) {
 	}
 
 	<-done
-	return files, nil
+
+	if lr.Sort != "" {
+		sort.SliceStable(files, func(i, j int) bool {
+			switch strings.ToLower(lr.Sort) {
+			case "name":
+				if lr.Asc {
+					return files[i].Name < files[j].Name
+				} else {
+					return files[i].Name > files[j].Name
+				}
+			case "date taken":
+				if a, aok := files[i].Meta.EXIF["DateTimeOriginal"]; aok {
+					if b, bok := files[j].Meta.EXIF["DateTimeOriginal"]; bok {
+						if as, ok := a.(string); ok {
+							if bs, ok := b.(string); ok {
+								if lr.Asc {
+									return as < bs
+								} else {
+									return as > bs
+								}
+							}
+						}
+					}
+				}
+			case "rating":
+				if lr.Asc {
+					return files[i].Meta.Rating < files[j].Meta.Rating
+				} else {
+					return files[i].Meta.Rating > files[j].Meta.Rating
+				}
+			}
+
+			return false
+		})
+	}
+
+	if lr.Count <= 0 {
+		lr.Count = 30
+	}
+	if lr.Offset < 0 {
+		lr.Offset = 0
+	}
+
+	return files[lr.Offset : lr.Offset+lr.Count], nil
 }
 
 type SizeReq struct {

@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 
 	"github.com/go-chi/chi"
@@ -18,7 +19,33 @@ type PhotoHandler struct {
 }
 
 func (ph *PhotoHandler) List(w http.ResponseWriter, r *http.Request) {
-	photos, err := ph.s.actions.List(FromRequest(r))
+	log := logger.GetLog(r)
+	offset := 0
+	count := 30
+	ascending := true
+	sort := ""
+	if of, err := strconv.Atoi(r.URL.Query().Get("offset")); err == nil {
+		offset = of
+	} else {
+		log.WithError(err).Error("error parsing 'offset' param")
+	}
+	if cnt, err := strconv.Atoi(r.URL.Query().Get("count")); err == nil {
+		count = cnt
+	} else {
+		log.WithError(err).Error("error parsing 'count' param")
+	}
+	if asc := r.URL.Query().Get("sort_dir"); asc == "desc" {
+		ascending = false
+	}
+	if s := r.URL.Query().Get("sort"); s != "" {
+		sort = s
+	}
+	photos, err := ph.s.actions.List(FromRequest(r), ListReq{
+		Offset: offset,
+		Count:  count,
+		Asc:    ascending,
+		Sort:   sort,
+	})
 	if err != nil {
 		writeErr(w, http.StatusInternalServerError, err)
 		return
@@ -142,7 +169,49 @@ func (ph *PhotoHandler) Websocket(w http.ResponseWriter, r *http.Request) {
 		switch req.Action {
 		case "list", "List":
 			log.WithField("request", req).Trace("parsed as list request action")
-			photos, err := ph.s.actions.List(FromRequest(r))
+			offset := 0
+			count := 30
+			ascending := true
+			sort := ""
+			if of, ok := req.Params["offset"]; ok {
+				if ofint, ok := of.(float64); ok {
+					offset = int(ofint)
+				} else {
+					log.WithField("offset", of)
+					resp.Error = "offset expected to be an integer"
+					break
+				}
+			}
+			if c, ok := req.Params["count"]; ok {
+				if cnt, ok := c.(float64); ok {
+					count = int(cnt)
+				} else {
+					resp.Error = "count expected to be an integer"
+					break
+				}
+			}
+			if dir, ok := req.Params["sort_dir"]; ok {
+				if sdir, ok := dir.(string); ok {
+					ascending = sdir == "asc"
+				} else {
+					resp.Error = "sort_dir expected to be a string"
+					break
+				}
+			}
+			if srt, ok := req.Params["sort"]; ok {
+				if ss, ok := srt.(string); ok {
+					sort = ss
+				} else {
+					resp.Error = "sort expected to be a string"
+					break
+				}
+			}
+			photos, err := ph.s.actions.List(FromRequest(r), ListReq{
+				Offset: offset,
+				Count:  count,
+				Asc:    ascending,
+				Sort:   sort,
+			})
 			if err != nil {
 				resp.Error = err.Error()
 			} else {

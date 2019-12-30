@@ -1,14 +1,14 @@
 <template>
 	<v-container fluid class="d-flex">
-		<v-progress-circular indeterminate v-if="loading" class="py-12 mx-auto" color="deep-orange lighten-2" />
-		<v-row justify="space-between" align="start" style="max-width: 100%" v-else>
+		<v-row justify="space-between" align="start" style="max-width: 100%">
 			<thumb
-				v-for="(img, i) in filtered" :key="i"
+				v-for="(img, i) in images" :key="i"
 				v-bind="img"
 				:index="i"
 				@click="onClick(i, $event)"
 			/>
-			<span class="ender" v-intersect="{ handler: intersect, options: { threshold: [0,1] }}"></span>
+			<v-progress-circular indeterminate v-if="loading" class="py-12 mx-auto" color="deep-orange lighten-2" />
+			<span v-else class="ender" v-intersect="{ handler: intersect, options: { threshold: [0,1] }}"></span>
 		</v-row>
 	</v-container>
 </template>
@@ -20,13 +20,9 @@ import { mapState, mapMutations, mapActions } from 'vuex'
 export default {
 	data() {
 		return {
-			max: 30
 		}
 	},
 	computed: {
-		filtered() {
-			return this.images.slice(0,this.max)
-		},
 		...mapState('images', ['images', 'selected', 'loading']),
 	},
 	methods: {
@@ -66,8 +62,11 @@ export default {
 			if (!isIntersecting) {
 				return false
 			}
+			if (this.loading) {
+				return false
+			}
 			console.log("scrolled to end. loading more")
-			this.max += 30
+			this.loadImages()
 		},
 		...mapMutations('images', ['clearSelection']),
 		...mapActions('images', ['toggleSelect', 'setSelection', 'addSelection', 'loadImages']),
