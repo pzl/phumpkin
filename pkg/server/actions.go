@@ -91,9 +91,9 @@ func (a Action) List(r Request, lr ListReq) ([]FileInfo, error) {
 		if strings.HasSuffix(name, ".xmp") {
 			return nil
 		}
-		path := strings.TrimPrefix(name, a.s.photoDir+"/")
+		relpath := strings.TrimPrefix(name, a.s.photoDir+"/")
 
-		meta, err := a.s.mgr.Load(r.Log, name)
+		meta, err := a.s.mgr.Load(r.Log, relpath)
 		if err != nil {
 			return err
 		}
@@ -153,21 +153,21 @@ func (a Action) List(r Request, lr ListReq) ([]FileInfo, error) {
 			}
 
 			thumbs[s.Name] = Resource{
-				URL:    "http://" + r.Host + "/api/v1/thumb/" + s.Name + "/" + thumbExt(path),
+				URL:    "http://" + r.Host + "/api/v1/thumb/" + s.Name + "/" + thumbExt(relpath),
 				Width:  rw,
 				Height: rh,
 			}
 		}
 
 		found <- FileInfo{
-			Name:     path,
+			Name:     relpath,
 			Dir:      fi.IsDir(),
 			Size:     fi.Size(),
 			Location: nil,
 			Rotation: rotation,
 			Meta:     &meta,
 			Original: Resource{
-				URL:    "http://" + r.Host + "/api/v1/photos/" + path,
+				URL:    "http://" + r.Host + "/api/v1/photos/" + relpath,
 				Width:  w,
 				Height: h,
 			},

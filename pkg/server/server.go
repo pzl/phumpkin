@@ -46,7 +46,7 @@ func New(options ...OptFunc) *server {
 		}
 	}
 
-	s.mgr = photos.New(s.dataDir)
+	s.mgr = photos.New(s.dataDir, s.photoDir)
 	d.Log = s.Log
 	return s
 }

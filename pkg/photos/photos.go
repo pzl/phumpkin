@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"os"
+	"path/filepath"
 	"time"
 
 	"github.com/dgraph-io/badger"
@@ -37,14 +38,16 @@ type DTOperation struct {
 }
 
 type Mgr struct {
-	dataDir string
-	db      *badger.DB
+	dataDir  string
+	photoDir string
+	db       *badger.DB
 }
 
-func New(dir string) *Mgr {
+func New(dataDir string, photoDir string) *Mgr {
 	return &Mgr{
-		dataDir: dir,
-		db:      nil,
+		dataDir:  dataDir,
+		photoDir: photoDir,
+		db:       nil,
 	}
 }
 
@@ -76,6 +79,7 @@ func (m *Mgr) Close() {
 //    + fileID.EXIF.time
 
 func (m *Mgr) Load(log logrus.FieldLogger, file string) (Meta, error) {
+	fullpath := filepath.Join(m.photoDir, file)
 	l := log.WithField("file", file)
 	if m.db == nil {
 		l.Error("db not connected")
@@ -93,7 +97,7 @@ func (m *Mgr) Load(log logrus.FieldLogger, file string) (Meta, error) {
 	xmp := metaState{}
 	exifInf := metaState{}
 
-	if fi, err := os.Stat(file + ".xmp"); err != nil {
+	if fi, err := os.Stat(fullpath + ".xmp"); err != nil {
 		l.WithError(err).Trace("problem looking at associated XMP file")
 		xmp.exists = false
 	} else {
@@ -101,7 +105,7 @@ func (m *Mgr) Load(log logrus.FieldLogger, file string) (Meta, error) {
 		xmp.sourceMod = fi.ModTime()
 	}
 
-	if fi, err := os.Stat(file); err != nil {
+	if fi, err := os.Stat(fullpath); err != nil {
 		l.WithError(err).Error("unable to find source file for info")
 		return Meta{}, err // source file must exist
 	} else {
@@ -178,7 +182,7 @@ func (m *Mgr) Load(log logrus.FieldLogger, file string) (Meta, error) {
 
 	if xmp.generate {
 		l.Info("reading XMP from file")
-		if meta, err = ReadXMP(file + ".xmp"); err != nil {
+		if meta, err = ReadXMP(fullpath + ".xmp"); err != nil {
 			l.WithError(err).Error("error reading XMP file")
 		}
 		l.Trace("writing XMP to db")
@@ -187,7 +191,7 @@ func (m *Mgr) Load(log logrus.FieldLogger, file string) (Meta, error) {
 
 	if exifInf.generate {
 		l.Info("reading EXIF from file")
-		if exif, err = ReadExif(file); err != nil {
+		if exif, err = ReadExif(fullpath); err != nil {
 			l.WithError(err).Error("error reading exif")
 		}
 		l.Trace("writing EXIF to db")
