@@ -39,9 +39,9 @@ type Exporter struct {
 func New() *Exporter {
 	return &Exporter{
 		ctx:  context.Background(),
-		q:    make([]Job, 0, 50),
-		add:  make(chan Job, 30), // put new jobs on the queue
-		next: make(chan Job),     // next job to be done
+		q:    make([]Job, 0, 500),
+		add:  make(chan Job, 100), // put new jobs on the queue
+		next: make(chan Job),      // next job to be done
 	}
 }
 
