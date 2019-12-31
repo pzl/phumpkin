@@ -1,8 +1,12 @@
 <template>
-	<v-container fluid class="d-flex">
+	<v-container fluid class="d-flex flex-column">
+		<v-row>
+			<path-crumbs />
+		</v-row>
+		<v-row>
+			<directory v-for="(d,i) in dirs" :key="d+i" :name="d" @click="onDirClick(d, $event)" />
+		</v-row>
 		<v-row justify="space-between" align="start" style="max-width: 100%">
-			<directory v-for="(d,i) in dirs" :key="d+i" :name="d" />
-			<div style="flex-basis: 100%"></div>
 			<thumb
 				v-for="(img, i) in images" :key="i"
 				v-bind="img"
@@ -25,6 +29,7 @@
 <script>
 import Thumb from '~/components/thumb'
 import Directory from '~/components/directory'
+import PathCrumbs from '~/components/pathCrumbs'
 import { mapState, mapMutations, mapActions } from 'vuex'
 
 export default {
@@ -68,6 +73,13 @@ export default {
 
 			}
 		},
+		onDirClick(dir, e) {
+			e.preventDefault()
+
+			this.pushPath(dir)
+			this.resetImages()
+			this.loadImages()
+		},
 		intersect(entries, observer, isIntersecting) {
 			if (!isIntersecting) {
 				return false
@@ -81,13 +93,13 @@ export default {
 			console.log("scrolled to end. loading more")
 			this.loadImages()
 		},
-		...mapMutations('images', ['clearSelection']),
-		...mapActions('images', ['toggleSelect', 'setSelection', 'addSelection', 'loadImages']),
+		...mapMutations('images', ['clearSelection', 'pushPath']),
+		...mapActions('images', ['toggleSelect', 'setSelection', 'addSelection', 'loadImages', 'resetImages']),
 	},
 	mounted() {
 		this.loadImages()
 	},
-	components: { Thumb, Directory }
+	components: { Thumb, Directory, PathCrumbs }
 }
 </script>
 

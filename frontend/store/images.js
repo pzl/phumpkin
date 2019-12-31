@@ -8,6 +8,7 @@ export const state = () => ({
 	err: false,
 	sort: 'name',
 	sort_asc: true,
+	path: [],
 })
 
 export const mutations = {
@@ -18,6 +19,9 @@ export const mutations = {
 	addImages(state, images) { state.images.push(...images) },
 	setImages(state,images) { state.images = images },
 	setDirs(state, dirs) { state.dirs = dirs },
+	clearPath(state) { state.path = [] },
+	pushPath(state, dir) { state.path.push(dir) },
+	popPath(state) { state.path.pop() },
 	clearImages(state) { state.images = [] },
 	clearSelection (state) { state.selected = [] },
 	select (state, image) { state.selected.push(image) },
@@ -48,6 +52,7 @@ export const actions = {
 						count: 10,
 						sort: state.sort,
 						sort_dir: state.sort_asc ? 'asc' : 'desc',
+						path: state.path.join('/'),
 					}
 				})
 				.then(data => {
@@ -66,7 +71,14 @@ export const actions = {
 			// fall back to HTTP
 			try {
 				// @todo: replace with location.origin + "/api.."
-				const response = await this.$axios.$get("http://localhost:6001/api/v1/photos?count=30&offset="+(state.images.length||0)+"&sort="+state.sort+"&sort_dir="+(state.sort_asc ? 'asc' : 'desc'))
+				const response = await this.$axios.$get(
+					"http://localhost:6001/api/v1/photos?"+
+						"count=30&"+
+						"offset="+(state.images.length||0)+"&"+
+						"sort="+state.sort+"&"+
+						"sort_dir="+(state.sort_asc ? 'asc' : 'desc')+"&"+
+						"path="+state.path.join('/')
+				)
 				commit('addImages', response.photos)
 				commit('setDirs', response.dirs)
 			} catch (error) {

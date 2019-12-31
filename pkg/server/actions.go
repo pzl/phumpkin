@@ -7,6 +7,8 @@ import (
 	"io/ioutil"
 	"net/http"
 	"os"
+	"path"
+	"path/filepath"
 	"sort"
 	"strings"
 	"time"
@@ -61,6 +63,7 @@ type ListReq struct {
 	Count  int
 	Sort   string
 	Asc    bool
+	Path   string
 }
 
 // @todo: duplicates by XMP
@@ -84,23 +87,27 @@ func (a Action) List(r Request, lr ListReq) ([]FileInfo, []string, error) {
 		done <- struct{}{}
 	}()
 
-	r.Log.WithField("photoDir", a.s.photoDir).Debug("scanning photoDir")
-	err := walker.WalkWithContext(r.Ctx, a.s.photoDir, func(name string, fi os.FileInfo) error {
+	searchPath := a.s.photoDir
+	if lr.Path != "" {
+		searchPath = filepath.Join(searchPath, path.Clean(lr.Path))
+	}
+	r.Log.WithField("searchPath", searchPath).Debug("scanning for photos")
+	err := walker.WalkWithContext(r.Ctx, searchPath, func(name string, fi os.FileInfo) error {
 		r.Log.WithField("filename", name).Trace("looping over file")
 
-		if name == a.s.photoDir {
+		if name == searchPath {
 			return nil
 		}
 		if strings.HasSuffix(name, ".xmp") {
 			return nil
 		}
 		relpath := strings.TrimPrefix(name, a.s.photoDir+"/")
-		if fi.IsDir() { // recurse into dirs, but ignore folder entries themselves
+		if fi.IsDir() {
 			found <- FileInfo{
-				Name: relpath,
+				Name: strings.TrimPrefix(name, searchPath+"/"),
 				Dir:  true,
 			}
-			return nil
+			return filepath.SkipDir // non-recursive for now
 		}
 
 		meta, err := a.s.mgr.Load(r.Log, relpath)

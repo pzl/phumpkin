@@ -23,28 +23,25 @@ func (ph *PhotoHandler) List(w http.ResponseWriter, r *http.Request) {
 	offset := 0
 	count := 30
 	ascending := true
-	sort := ""
 	if of, err := strconv.Atoi(r.URL.Query().Get("offset")); err == nil {
 		offset = of
-	} else {
+	} else if r.URL.Query().Get("offset") != "" {
 		log.WithError(err).Error("error parsing 'offset' param")
 	}
 	if cnt, err := strconv.Atoi(r.URL.Query().Get("count")); err == nil {
 		count = cnt
-	} else {
+	} else if r.URL.Query().Get("count") != "" {
 		log.WithError(err).Error("error parsing 'count' param")
 	}
 	if asc := r.URL.Query().Get("sort_dir"); asc == "desc" {
 		ascending = false
 	}
-	if s := r.URL.Query().Get("sort"); s != "" {
-		sort = s
-	}
 	photos, dirs, err := ph.s.actions.List(FromRequest(r), ListReq{
 		Offset: offset,
 		Count:  count,
 		Asc:    ascending,
-		Sort:   sort,
+		Sort:   r.URL.Query().Get("sort"),
+		Path:   r.URL.Query().Get("path"),
 	})
 	if err != nil {
 		writeErr(w, http.StatusInternalServerError, err)
@@ -174,6 +171,7 @@ func (ph *PhotoHandler) Websocket(w http.ResponseWriter, r *http.Request) {
 			count := 30
 			ascending := true
 			sort := ""
+			path := ""
 			if of, ok := req.Params["offset"]; ok {
 				if ofint, ok := of.(float64); ok {
 					offset = int(ofint)
@@ -207,11 +205,20 @@ func (ph *PhotoHandler) Websocket(w http.ResponseWriter, r *http.Request) {
 					break
 				}
 			}
+			if pth, ok := req.Params["path"]; ok {
+				if p, ok := pth.(string); ok {
+					path = p
+				} else {
+					resp.Error = "path expected to be a string"
+					break
+				}
+			}
 			photos, dirs, err := ph.s.actions.List(FromRequest(r), ListReq{
 				Offset: offset,
 				Count:  count,
 				Asc:    ascending,
 				Sort:   sort,
+				Path:   path,
 			})
 			if err != nil {
 				resp.Error = err.Error()
