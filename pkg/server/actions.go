@@ -247,7 +247,7 @@ func (a Action) List(r Request, lr ListReq) ([]FileInfo, []string, error) {
 		lr.Offset = 0
 	}
 
-	return files[lr.Offset : lr.Offset+lr.Count], dirs, nil
+	return files[lr.Offset:min(lr.Offset+lr.Count, len(files))], dirs, nil
 }
 
 type SizeReq struct {
@@ -352,4 +352,11 @@ func (a Action) GetSize(r Request, sr SizeReq) (string, error) {
 		return "", err
 	}
 	return base64.StdEncoding.EncodeToString(data), nil
+}
+
+func min(a, b int) int {
+	if b < a {
+		return b
+	}
+	return a
 }
