@@ -16,7 +16,7 @@
 			<div v-if="loading" class="my-12 d-flex" style="flex-basis: 100%">
 				<v-progress-circular indeterminate class="mx-auto" color="deep-orange lighten-2" />
 			</div>
-			<span v-else class="ender" v-intersect="{ handler: intersect, options: { threshold: [0,1] }}"></span>
+			<span v-if="loadMore && !loading" class="ender" v-intersect="{ handler: intersect, options: { threshold: [0,1] }}"></span>
 			<div v-if="err" class="my-12 d-flex" style="flex-basis: 100%">
 				<v-btn icon class="mx-auto error--text" x-large @click="loadImages">
 					<v-icon x-large>mdi-reload-alert</v-icon>
@@ -38,7 +38,7 @@ export default {
 		}
 	},
 	computed: {
-		...mapState('images', ['images', 'dirs', 'selected', 'loading', 'err']),
+		...mapState('images', ['images', 'dirs', 'selected', 'loading', 'err', 'loadMore']),
 	},
 	methods: {
 		onClick(img, e) {

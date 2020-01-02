@@ -5,6 +5,7 @@ export const state = () => ({
 	dirs: [],
 	selected: [],
 	loading: false,
+	loadMore: true,
 	err: false,
 	sort: 'name',
 	sort_asc: true,
@@ -37,6 +38,7 @@ export const mutations = {
 	},
 	sortBy(state, by) { state.sort = by },
 	sortDir(state, dir){ state.sort_asc = dir },
+	setLoadMore(state, more){ state.loadMore = more },
 }
 
 export const actions = {
@@ -74,6 +76,9 @@ export const actions = {
 			)
 		}
 		p.then(data => {
+			if (data.photos.length === 0) {
+				commit('setLoadMore', false)
+			}
 			commit('addImages', data.photos)
 			commit('setDirs', data.dirs)
 		})
@@ -104,6 +109,7 @@ export const actions = {
 		}
 	},
 	resetImages({ commit }) {
+		commit('setLoadMore', true)
 		commit('clearSelection')
 		commit('clearImages')
 	},
