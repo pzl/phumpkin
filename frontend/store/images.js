@@ -40,12 +40,14 @@ export const mutations = {
 }
 
 export const actions = {
-	async loadImages({ commit, state }) {
+	loadImages({ commit, state }) {
 		commit('startLoading')
 		commit('clearErr')
 
+		let p;
+
 		if (this.$sock.connected()) {
-			this.$sock.send({
+			p = this.$sock.send({
 					action:"list",
 					params: {
 						offset: state.images.length,
@@ -55,44 +57,35 @@ export const actions = {
 						path: state.path.join('/'),
 					}
 				})
-				.then(data => {
-					commit('addImages', data.photos)
-					commit('setDirs', data.dirs)
-				})
-				.catch(error => {
-					console.log('sock error: ')
-					console.log(error)
-					commit('errorLoading')
-				})
-				.finally(() => {
-					commit('stopLoading')
-				})
 		} else {
 			// fall back to HTTP
-			try {
-				let server = location.origin
-				if (server === "http://localhost:3000") {
-					// @todo: remove local dev hack
-					server = "http://localhost:6001"
-				}
-				const response = await this.$axios.$get(
-					server+"/api/v1/photos?"+
-						"count=30&"+
-						"offset="+(state.images.length||0)+"&"+
-						"sort="+state.sort+"&"+
-						"sort_dir="+(state.sort_asc ? 'asc' : 'desc')+"&"+
-						"path="+state.path.join('/')
-				)
-				commit('addImages', response.photos)
-				commit('setDirs', response.dirs)
-			} catch (error) {
-				// oh no
-				console.log("http error: ")
-				console.log(error)
-				commit('errorLoading')
+			let server = location.origin
+			if (server === "http://localhost:3000") {
+				// @todo: remove local dev hack
+				server = "http://localhost:6001"
 			}
-			commit('stopLoading')
+			p = this.$axios.$get(
+				server+"/api/v1/photos?"+
+					"count=30&"+
+					"offset="+(state.images.length||0)+"&"+
+					"sort="+state.sort+"&"+
+					"sort_dir="+(state.sort_asc ? 'asc' : 'desc')+"&"+
+					"path="+state.path.join('/')
+			)
 		}
+		p.then(data => {
+			commit('addImages', data.photos)
+			commit('setDirs', data.dirs)
+		})
+		.catch(error => {
+			console.log('load image error: ')
+			console.log(error)
+			commit('errorLoading')
+		})
+		.finally(() => {
+			commit('stopLoading')
+		})
+		return p
 	},
 	toggleSelect({ commit, state }, image) {
 		if (state.selected.includes(image)) {
