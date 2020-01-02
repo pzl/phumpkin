@@ -4,7 +4,9 @@ go 1.13
 
 require (
 	github.com/dgraph-io/badger v1.6.0
+	github.com/fsnotify/fsnotify v1.4.7
 	github.com/go-chi/chi v4.0.2+incompatible
+	github.com/pkg/errors v0.8.1
 	github.com/pzl/mstk v0.0.0-20190908180923-0e4983063dd8
 	github.com/saracen/walker v0.0.0-20191201085201-324a081bae7e
 	github.com/shurcooL/httpfs v0.0.0-20190707220628-8d4bc4ba7749 // indirect
