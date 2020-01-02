@@ -70,9 +70,13 @@ export const actions = {
 		} else {
 			// fall back to HTTP
 			try {
-				// @todo: replace with location.origin + "/api.."
+				let server = location.origin
+				if (server === "http://localhost:3000") {
+					// @todo: remove local dev hack
+					server = "http://localhost:6001"
+				}
 				const response = await this.$axios.$get(
-					"http://localhost:6001/api/v1/photos?"+
+					server+"/api/v1/photos?"+
 						"count=30&"+
 						"offset="+(state.images.length||0)+"&"+
 						"sort="+state.sort+"&"+

@@ -49,8 +49,14 @@ export default ({ app, store }, inject) => {
 	const t = {
 		sock: null,
 		reconnect: function(){
-			// @todo: location.origin.replace(/^http/,"ws")+"/api..."
-			this.sock = new WebSocket("ws://localhost:6001/api/v1/ws")
+			// location.origin.replace(/^http/,"ws")+"/api..."
+			let server = location.origin
+			if (server === "http://localhost:3000") {
+				// @todo: remove local dev hack
+				server = "http://localhost:6001"
+			}
+			server = server.replace(/^http/,"ws")
+			this.sock = new WebSocket(server+"/api/v1/ws")
 			this.sock.onopen = onopen
 		},
 		send: function(data) {
