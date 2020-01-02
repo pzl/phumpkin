@@ -26,6 +26,7 @@ cp bin/phumpkin $cmt/phumpkin
 
 echo "[i] installing darktable"
 buildah run -- $c apk add darktable
+cp etc/darktablerc $cmt/usr/share/darktable/darktablerc
 
 echo "[i] installing exiftool"
 buildah run -- $c apk add exiftool
