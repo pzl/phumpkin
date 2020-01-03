@@ -15,3 +15,13 @@ Unless you are looking for the same things, there are likely better general purp
 - [Lychee](https://lychee.electerious.com/)
 - [piwigo](http://piwigo.org/)
 - [koken](http://koken.me/) (not FOSS)
+
+
+Objectives 
+-----------
+
+- keeps your photo folder structure in tact
+- generates thumbnails outside photo library (so you can easily delete at will to free up space)
+- download various JPEG sizes on demand
+    - applies XMP edits for above exports
+- fast viewer (no loading 20k thumbnails on one page immediately)
