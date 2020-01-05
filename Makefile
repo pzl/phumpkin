@@ -17,10 +17,7 @@ frontend/dist/index.html: frontend/node_modules $(shell find frontend -type f -n
 frontend/node_modules: frontend/package.json frontend/package-lock.json
 	cd frontend && npm install
 
-static: cmd/phumpkin/assets.go
-	CGO_ENABLED=0 GOOS=linux go build -a -ldflags '-extldflags "-static"' -o $(TARGET) ./cmd/phumpkin/
-
-container: static
+container:
 	sudo etc/build-container.sh
 
 clean:
