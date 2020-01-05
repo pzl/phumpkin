@@ -313,9 +313,10 @@ func (a Action) GetSize(r Request, sr SizeReq) (string, error) {
 			}
 		}
 
-		if sr.Size == "x-small" {
+		if sr.Size == "x-small" || src != filepath {
 			// quick trickery using vips
 
+			l.Trace("resizing with vips")
 			if err := photos.Resize(src, thumbpath, Px(sr.Size)); err != nil {
 				l.WithField("src", src).WithField("dest", thumbpath).WithError(err).Error("error resizing with vips")
 				return "", err
