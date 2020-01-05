@@ -3,6 +3,7 @@ module github.com/pzl/phumpkin
 go 1.13
 
 require (
+	github.com/DAddYE/vips v0.0.0-20170307215529-87cfaf94f7a1
 	github.com/dgraph-io/badger v1.6.0
 	github.com/fsnotify/fsnotify v1.4.7
 	github.com/go-chi/chi v4.0.2+incompatible

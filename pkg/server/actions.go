@@ -313,29 +313,43 @@ func (a Action) GetSize(r Request, sr SizeReq) (string, error) {
 			}
 		}
 
-		// if using raw file, use XMP as a parameter
-		opts := make([]darktable.JobOpt, 0, 1)
-		if src == filepath {
-			opts = append(opts, darktable.SetXMP(xmp))
+		if sr.Size == "x-small" || src != filepath {
+			// quick trickery using vips
+
+			l.Trace("resizing with vips")
+			if err := photos.Resize(src, thumbpath, Px(sr.Size)); err != nil {
+				l.WithField("src", src).WithField("dest", thumbpath).WithError(err).Error("error resizing with vips")
+				return "", err
+			}
+
+		} else {
+			// small-or-above request, resize using darktable
+
+			// if using raw file, use XMP as a parameter
+			opts := make([]darktable.JobOpt, 0, 1)
+			if src == filepath {
+				opts = append(opts, darktable.SetXMP(xmp))
+			}
+
+			job := a.s.darktable.CreateJob(src, thumbpath, Px(sr.Size), opts...)
+			priority := darktable.PR_NORMAL
+			switch sr.Purpose {
+			case "lazysrc":
+				priority = darktable.PR_HIGH
+			case "viewer":
+				priority = darktable.PR_IMMEDIATE
+			}
+			a.s.darktable.Add(job, priority)
+			select {
+			case <-job.Done:
+				l.Trace("thumb generation job complete")
+			case <-r.Ctx.Done():
+				l.Trace("HTTP client disconnected, stopping immediate thumb request")
+				job.Cancel()
+				return "", errors.New("canceled")
+			}
 		}
 
-		job := a.s.darktable.CreateJob(src, thumbpath, Px(sr.Size), opts...)
-		priority := darktable.PR_NORMAL
-		switch sr.Purpose {
-		case "lazysrc":
-			priority = darktable.PR_HIGH
-		case "viewer":
-			priority = darktable.PR_IMMEDIATE
-		}
-		a.s.darktable.Add(job, priority)
-		select {
-		case <-job.Done:
-			l.Trace("thumb generation job complete")
-		case <-r.Ctx.Done():
-			l.Trace("HTTP client disconnected, stopping immediate thumb request")
-			job.Cancel()
-			return "", errors.New("canceled")
-		}
 	} else if err != nil {
 		l.WithError(err).Error("error looking up thumb file")
 		return "", err
