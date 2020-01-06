@@ -23,18 +23,21 @@ type DTXMP struct {
 		DTHistoryEnd         string   `xml:"history_end,attr"`
 		DTRawParams          string   `xml:"raw_params,attr"`
 		DTXMPVersion         string   `xml:"xmp_version,attr"`
+		IOPOrderVersion      string   `xml:"iop_order_version,attr"`
 		DTColorLabels        []string `xml:"colorlabels>Seq>li"`
 		Creator              []string `xml:"creator>Seq>li"`
 		Title                []string `xml:"title>Alt>li,omitempty"`
 		DTHistory            []*struct {
-			BlendOpParams  string `xml:"blendop_params,attr"`
-			BlendOpVersion string `xml:"blendop_version,attr"`
+			Num            string `xml:"num,attr"`
+			Operation      string `xml:"operation,attr"`
 			Enabled        string `xml:"enabled,attr"`
 			ModVersion     string `xml:"modversion,attr"`
+			Params         string `xml:"params,attr"`
 			MultiName      string `xml:"multi_name,attr"`
 			MultiPriority  string `xml:"multi_priority,attr"`
-			Operation      string `xml:"operation,attr"`
-			Params         string `xml:"params,attr"`
+			IOPOrder       string `xml:"iop_order,attr"`
+			BlendOpParams  string `xml:"blendop_params,attr"`
+			BlendOpVersion string `xml:"blendop_version,attr"`
 		} `xml:"history>Seq>li,omitempty"`
 		DTTags        []string `xml:"hierarchicalSubject>Seq>li,omitempty"`
 		DTMask        []string `xml:"mask>Seq>li,omitempty"`
