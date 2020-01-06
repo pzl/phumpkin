@@ -32,8 +32,6 @@ func main() {
 	}
 
 	c2, cancel2 := context.WithTimeout(context.Background(), 5*time.Second)
-
-	// give <timeout> chance to shutdown gracefully
-	defer s.Shutdown(c2)
 	defer cancel2()
+	s.Shutdown(c2)
 }
