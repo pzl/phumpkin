@@ -17,6 +17,7 @@
 					<div>{{ sizeof }}</div>
 					<div>{{ original.width }}x{{ original.height }}</div>
 					<div v-if="taken">{{taken}}</div>
+					<div class="loc" v-if="meta.loc"><v-icon small>mdi-map-marker</v-icon> {{ meta.loc.lat }}, {{ meta.loc.lon }}<span v-if="meta.loc.alt">, {{ meta.loc.alt }}</span></div>
 				</v-tab-item>
 				<v-tab-item value="shot-info">
 					<v-row no-gutters justify="space-between">
@@ -91,8 +92,6 @@
 					<div v-if="meta.rights">Rights: {{ meta.rights }}</div>
 				</v-tab-item>
 			</v-tabs-items>
-
-			<div class="loc" v-if="loc"><v-icon small>mdi-map-marker</v-icon> {{ loc.lat }}, {{ loc.lon }}</div>
 		</v-card-text>
 
 		<v-card-actions>
@@ -127,7 +126,6 @@ export default {
 		dir: {},
 		size: {}, // in bytes
 		meta: {}, //
-		loc: {}, // null or {lat:'', lon:''}
 		thumbs: {}, // full: { url: "...", width: n, height: n}
 		original: {}, //{ url: "...", width: n, height: n}
 	},

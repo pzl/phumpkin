@@ -24,10 +24,6 @@ type Action struct {
 	s *server
 }
 
-type Location struct {
-	Lat string `json:"lat"`
-	Lon string `json:"lon"`
-}
 type Resource struct {
 	URL    string `json:"url"`
 	Width  int    `json:"width"`
@@ -39,7 +35,6 @@ type FileInfo struct {
 	Dir      bool                `json:"-"`
 	Rotation int                 `json:"rotation"`
 	Meta     *photos.Meta        `json:"meta"`
-	Location *Location           `json:"loc"`
 	Thumbs   map[string]Resource `json:"thumbs"`
 	Original Resource            `json:"original"`
 }
@@ -180,7 +175,6 @@ func (a Action) List(r Request, lr ListReq) ([]FileInfo, []string, error) {
 			Name:     relpath,
 			Dir:      false,
 			Size:     fi.Size(),
-			Location: nil,
 			Rotation: rotation,
 			Meta:     &meta,
 			Original: Resource{

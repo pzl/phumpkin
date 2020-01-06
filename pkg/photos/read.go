@@ -27,6 +27,11 @@ type DTXMP struct {
 		DTColorLabels        []string `xml:"colorlabels>Seq>li"`
 		Creator              []string `xml:"creator>Seq>li"`
 		Title                []string `xml:"title>Alt>li,omitempty"`
+		Altitude             string   `xml:"GPSAltitude,attr"`
+		AltitudeRef          string   `xml:"GPSAltitudeRef,attr"`
+		Latitude             string   `xml:"GPSLatitude,attr"`
+		Longitude            string   `xml:"GPSLongitude,attr"`
+		GPSVerID             string   `xml:"GPSVersionID,attr"`
 		DTHistory            []*struct {
 			Num            string `xml:"num,attr"`
 			Operation      string `xml:"operation,attr"`
@@ -36,8 +41,8 @@ type DTXMP struct {
 			MultiName      string `xml:"multi_name,attr"`
 			MultiPriority  string `xml:"multi_priority,attr"`
 			IOPOrder       string `xml:"iop_order,attr"`
-			BlendOpParams  string `xml:"blendop_params,attr"`
 			BlendOpVersion string `xml:"blendop_version,attr"`
+			BlendOpParams  string `xml:"blendop_params,attr"`
 		} `xml:"history>Seq>li,omitempty"`
 		DTTags        []string `xml:"hierarchicalSubject>Seq>li,omitempty"`
 		DTMask        []string `xml:"mask>Seq>li,omitempty"`
@@ -99,6 +104,15 @@ func ReadXMP(file string) (Meta, error) {
 		}
 	}
 
+	var l *Location
+	if d.Description.Latitude != "" && d.Description.Longitude != "" {
+		l = &Location{
+			Lat:      d.Description.Latitude,
+			Lon:      d.Description.Longitude,
+			Altitude: d.Description.Altitude,
+		}
+	}
+
 	return Meta{
 		DerivedFromFile: d.Description.DerivedFrom,
 		Rating:          rating,
@@ -108,6 +122,7 @@ func ReadXMP(file string) (Meta, error) {
 		Creator:         strings.Join(d.Description.Creator, ", "),
 		Rights:          strings.Join(d.Description.Rights, ", "),
 		History:         ops,
+		Location:        l,
 		Title:           strings.Join(d.Description.Title, ", "),
 		Tags:            d.Description.DTTags,
 	}, nil

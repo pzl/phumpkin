@@ -11,6 +11,7 @@ import (
 type Meta struct {
 	DerivedFromFile string                 `json:"derived_from"`
 	Rating          int                    `json:"rating"`
+	Location        *Location              `json:"loc,omitempty"`
 	AutoPresets     bool                   `json:"auto_presets_applied"`
 	XMPVersion      int                    `json:"xmp_version"`
 	ColorLabels     []string               `json:"color_labels,omitempty"`
@@ -20,6 +21,12 @@ type Meta struct {
 	Tags            []string               `json:"tags,omitempty"`
 	Title           string                 `json:"title,omitempty"`
 	EXIF            map[string]interface{} `json:"exif"`
+}
+
+type Location struct {
+	Lat      string `json:"lat"`
+	Lon      string `json:"lon"`
+	Altitude string `json:"alt"`
 }
 
 type DTOperation struct {
