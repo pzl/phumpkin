@@ -101,6 +101,8 @@ func ReadXMP(file string) (Meta, error) {
 			MultiPriority:  mp,
 			BlendOpVersion: bv,
 			BlendOpParams:  h.BlendOpParams,
+			Number:         h.Num,
+			IOPOrder:       h.IOPOrder,
 		}
 	}
 

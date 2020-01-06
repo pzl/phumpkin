@@ -31,6 +31,7 @@ type Location struct {
 
 type DTOperation struct {
 	Name           string `json:"name"`
+	Number         string `json:"num"`
 	Enabled        bool   `json:"enabled"`
 	ModVersion     int    `json:"modversion"`
 	Params         string `json:"params"`
@@ -38,6 +39,7 @@ type DTOperation struct {
 	MultiPriority  int    `json:"multi_priority"`
 	BlendOpVersion int    `json:"blendop_version"`
 	BlendOpParams  string `json:"blendop_params"`
+	IOPOrder       string `json:"iop_order"`
 }
 
 type Mgr struct {
