@@ -43,28 +43,22 @@ type DTOperation struct {
 }
 
 type Mgr struct {
-	log      logrus.FieldLogger
-	dataDir  string
-	photoDir string
-	db       *badger.DB
-	indexer  Indexer
+	log     logrus.FieldLogger
+	db      *badger.DB
+	indexer Indexer
 }
 
-func New(log logrus.FieldLogger, dataDir string, photoDir string) *Mgr {
-	return &Mgr{
-		log:      log,
-		dataDir:  dataDir,
-		photoDir: photoDir,
-		db:       nil,
-		indexer: Indexer{
-			log:      log,
-			photoDir: photoDir,
-		},
-	}
+func New() *Mgr {
+	return &Mgr{}
 }
 
 func (m *Mgr) Start(ctx context.Context) error {
-	db, err := badger.Open(badger.DefaultOptions(m.dataDir))
+	m.log = ctx.Value("log").(logrus.FieldLogger)
+	photoDir := ctx.Value("photoDir").(string)
+	m.indexer.photoDir = photoDir
+	m.indexer.log = m.log
+
+	db, err := badger.Open(badger.DefaultOptions(ctx.Value("dataDir").(string)))
 	if err != nil {
 		return err
 	}
@@ -78,7 +72,7 @@ func (m *Mgr) Start(ctx context.Context) error {
 		m.Close()
 		return err
 	}
-	if err := m.indexer.Watch(m.photoDir); err != nil {
+	if err := m.indexer.Watch(photoDir); err != nil {
 		m.Close()
 		return err
 	}

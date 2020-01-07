@@ -36,6 +36,7 @@ func New(options ...OptFunc) *server {
 		Server:    mstk.NewServer(),
 		router:    chi.NewRouter(),
 		darktable: d,
+		mgr:       photos.New(),
 	}
 	s.PhotoHandler.s = s
 	s.actions.s = s
@@ -45,17 +46,21 @@ func New(options ...OptFunc) *server {
 			o(s)
 		}
 	}
-
-	s.mgr = photos.New(s.Log, s.dataDir, s.photoDir)
-	d.Log = s.Log
 	return s
 }
 
 func (s *server) Start(ctx context.Context) (err error) {
 	s.routes()
-	s.mgr.Start(ctx)
-	s.darktable.Start(ctx)
-	return s.Server.Start(ctx)
+
+	c := context.WithValue(ctx, "log", s.Log)
+	c = context.WithValue(c, "photoDir", s.photoDir)
+	c = context.WithValue(c, "dataDir", s.dataDir)
+	c = context.WithValue(c, "thumbDir", s.thumbDir)
+	if err := s.mgr.Start(c); err != nil {
+		return err
+	}
+	s.darktable.Start(c)
+	return s.Server.Start(c)
 }
 
 func Addr(addr string) OptFunc      { return func(s *server) { mstk.Addr(addr)(s.Server) } }

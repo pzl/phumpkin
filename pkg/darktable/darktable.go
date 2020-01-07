@@ -32,7 +32,7 @@ type Exporter struct {
 	stop func()
 	add  chan Job
 	next chan Job
-	Log  *logrus.Logger
+	log  *logrus.Logger
 	q    []Job
 }
 
@@ -46,14 +46,15 @@ func New() *Exporter {
 }
 
 func (e *Exporter) Start(ctx context.Context) {
+	e.log = ctx.Value("log").(*logrus.Logger)
 	e.ctx, e.stop = context.WithCancel(ctx)
-	e.Log.Info("beginning darktable process loop")
+	e.log.Info("beginning darktable process loop")
 	go e.Process()
 	go e.sort()
 }
 
 func (e *Exporter) CreateJob(src string, dest string, px int, opts ...JobOpt) Job {
-	l := e.Log.WithFields(logrus.Fields{
+	l := e.log.WithFields(logrus.Fields{
 		"src":  src,
 		"opts": opts,
 		"dest": dest,
@@ -92,7 +93,7 @@ const (
 // to be done in priority order
 func (e *Exporter) Add(j Job, p Priority) {
 	j.priority = p
-	e.Log.WithField("job", j).Trace("adding job to queue")
+	e.log.WithField("job", j).Trace("adding job to queue")
 	e.add <- j
 }
 
@@ -115,7 +116,7 @@ func (e *Exporter) sort() {
 	for {
 		select {
 		case <-e.ctx.Done():
-			e.Log.Info("darktable context done. Exiting queue sorter")
+			e.log.Info("darktable context done. Exiting queue sorter")
 			return
 		case job := <-e.add:
 			e.q = append(e.q, job)
@@ -152,10 +153,10 @@ func (e *Exporter) Process() {
 	for {
 		select {
 		case <-e.ctx.Done():
-			e.Log.Info("darktable context done. Exiting process loop")
+			e.log.Info("darktable context done. Exiting process loop")
 			return
 		case job := <-e.next:
-			e.Log.WithField("dst", job.dest).WithField("priority", job.priority).Debug("pulling job to process")
+			e.log.WithField("dst", job.dest).WithField("priority", job.priority).Debug("pulling job to process")
 			e.do(job)
 			job.Done <- struct{}{}
 		}
@@ -163,7 +164,7 @@ func (e *Exporter) Process() {
 }
 
 func (e *Exporter) do(j Job) {
-	e.Log.Trace("starting job")
+	e.log.Trace("starting job")
 	defer func() {
 		if j.Cancel != nil {
 			j.Cancel()
@@ -178,21 +179,21 @@ func (e *Exporter) do(j Job) {
 		args[1] = j.xmp
 	}
 
-	e.Log.WithField("args", args).Debug("calling darktable-cli")
+	e.log.WithField("args", args).Debug("calling darktable-cli")
 	cmd := exec.CommandContext(j.ctx, "darktable-cli", args...)
 
 	var buf bytes.Buffer
 	sout, o_err := cmd.StdoutPipe()
 	if o_err != nil {
-		e.Log.WithError(o_err).Error("error getting stdout of darktable process")
+		e.log.WithError(o_err).Error("error getting stdout of darktable process")
 	}
 	serr, e_err := cmd.StderrPipe()
 	if e_err != nil {
-		e.Log.WithError(e_err).Error("error getting stderr of darktable process")
+		e.log.WithError(e_err).Error("error getting stderr of darktable process")
 	}
 
 	if err := cmd.Start(); err != nil {
-		e.Log.WithError(err).Error("error starting darktable-cli process. Unable to perform job")
+		e.log.WithError(err).Error("error starting darktable-cli process. Unable to perform job")
 		return
 	}
 
@@ -204,13 +205,13 @@ func (e *Exporter) do(j Job) {
 	}
 
 	if buf.Len() > 0 {
-		e.Log.Trace(buf.String())
+		e.log.Trace(buf.String())
 	}
 
 	err := cmd.Wait()
 	if err != nil {
-		e.Log.WithError(err).Error("darktable-cli exit error")
+		e.log.WithError(err).Error("darktable-cli exit error")
 	} else {
-		e.Log.Info("darktable-cli exited successfully")
+		e.log.Info("darktable-cli exited successfully")
 	}
 }

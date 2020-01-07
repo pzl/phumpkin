@@ -39,20 +39,6 @@ type FileInfo struct {
 	Original Resource            `json:"original"`
 }
 
-type Request struct {
-	Ctx  context.Context
-	Log  logrus.FieldLogger
-	Host string
-}
-
-func FromRequest(r *http.Request) Request {
-	return Request{
-		Ctx:  r.Context(),
-		Log:  logger.GetLog(r),
-		Host: r.Host,
-	}
-}
-
 type ListReq struct {
 	Offset int
 	Count  int
@@ -63,8 +49,11 @@ type ListReq struct {
 
 // @todo: duplicates by XMP
 // primary may be <IMG>.ARW.xmp and dupe may be <IMG>_nn.ARW.XMP
-func (a Action) List(r Request, lr ListReq) ([]FileInfo, []string, error) {
+func (a Action) List(ctx context.Context, lr ListReq) ([]FileInfo, []string, error) {
 	files := make([]FileInfo, 0, 300)
+	log := logger.LogFromCtx(ctx)
+	photoDir := ctx.Value("photoDir").(string)
+
 	dirs := make([]string, 0, 20)
 	found := make(chan FileInfo)
 	done := make(chan struct{})
@@ -82,13 +71,13 @@ func (a Action) List(r Request, lr ListReq) ([]FileInfo, []string, error) {
 		done <- struct{}{}
 	}()
 
-	searchPath := a.s.photoDir
+	searchPath := photoDir
 	if lr.Path != "" {
 		searchPath = filepath.Join(searchPath, path.Clean(lr.Path))
 	}
-	r.Log.WithField("searchPath", searchPath).Debug("scanning for photos")
-	err := walker.WalkWithContext(r.Ctx, searchPath, func(name string, fi os.FileInfo) error {
-		r.Log.WithField("filename", name).Trace("looping over file")
+	log.WithField("searchPath", searchPath).Debug("scanning for photos")
+	err := walker.WalkWithContext(ctx, searchPath, func(name string, fi os.FileInfo) error {
+		log.WithField("filename", name).Trace("looping over file")
 
 		if name == searchPath {
 			return nil
@@ -96,7 +85,6 @@ func (a Action) List(r Request, lr ListReq) ([]FileInfo, []string, error) {
 		if strings.HasSuffix(name, ".xmp") {
 			return nil
 		}
-		relpath := strings.TrimPrefix(name, a.s.photoDir+"/")
 		if fi.IsDir() {
 			found <- FileInfo{
 				Name: strings.TrimPrefix(name, searchPath+"/"),
@@ -105,7 +93,8 @@ func (a Action) List(r Request, lr ListReq) ([]FileInfo, []string, error) {
 			return filepath.SkipDir // non-recursive for now
 		}
 
-		meta, err := a.s.mgr.Load(r.Log, relpath)
+		relpath := strings.TrimPrefix(name, photoDir+"/")
+		meta, err := a.s.mgr.Load(log, relpath)
 		if err != nil {
 			return err
 		}
@@ -187,7 +176,7 @@ func (a Action) List(r Request, lr ListReq) ([]FileInfo, []string, error) {
 
 		return nil
 	}, walker.WithErrorCallback(func(name string, err error) error {
-		r.Log.WithError(err).Error("encountered err when walking files")
+		log.WithError(err).Error("encountered err when walking files")
 		return nil
 	}))
 	close(found)
@@ -251,15 +240,19 @@ type SizeReq struct {
 	Purpose string
 }
 
-func (a Action) GetSize(r Request, sr SizeReq) (string, error) {
-	filepath := a.s.photoDir + "/" + sr.File
-	thumbpath := a.s.thumbDir + "/" + sr.Size + "/" + thumbExt(sr.File)
+func (a Action) GetSize(ctx context.Context, sr SizeReq) (string, error) {
+	log := logger.LogFromCtx(ctx)
+	photoDir := ctx.Value("photoDir").(string)
+	thumbDir := ctx.Value("thumbDir").(string)
 
-	r.Log.WithFields(logrus.Fields{
+	filepath := photoDir + "/" + sr.File
+	thumbpath := thumbDir + "/" + sr.Size + "/" + thumbExt(sr.File)
+
+	log.WithFields(logrus.Fields{
 		"size": sr.Size,
 		"file": sr.File,
 	}).Debug("size request")
-	l := r.Log.WithField("file", sr.File)
+	l := log.WithField("file", sr.File)
 
 	// check modification times of source image and XMPs
 	var xmp string
@@ -298,7 +291,7 @@ func (a Action) GetSize(r Request, sr SizeReq) (string, error) {
 			if s.Max < Px(sr.Size) && s.Max != 0 {
 				continue // thumb is smaller, except 'full' size
 			}
-			bigthumb := a.s.thumbDir + "/" + s.Name + "/" + thumbExt(sr.File)
+			bigthumb := thumbDir + "/" + s.Name + "/" + thumbExt(sr.File)
 			if ti, err := os.Stat(bigthumb); err == nil {
 				if ti.ModTime().After(srcinfo.ModTime()) {
 					src = bigthumb
@@ -337,7 +330,7 @@ func (a Action) GetSize(r Request, sr SizeReq) (string, error) {
 			select {
 			case <-job.Done:
 				l.Trace("thumb generation job complete")
-			case <-r.Ctx.Done():
+			case <-ctx.Done():
 				l.Trace("HTTP client disconnected, stopping immediate thumb request")
 				job.Cancel()
 				return "", errors.New("canceled")
@@ -351,7 +344,7 @@ func (a Action) GetSize(r Request, sr SizeReq) (string, error) {
 	l.Debug("sending thumb file")
 
 	if !sr.B64 {
-		return "http://" + r.Host + "/api/v1/thumb/" + sr.Size + "/" + thumbExt(sr.File), nil
+		return "http://" + gethost(ctx) + "/api/v1/thumb/" + sr.Size + "/" + thumbExt(sr.File), nil
 	}
 
 	// read into b64
