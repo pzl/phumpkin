@@ -54,6 +54,7 @@ func (s server) InjectPaths(next http.Handler) http.Handler {
 		ctx := context.WithValue(r.Context(), "photoDir", s.photoDir)
 		ctx = context.WithValue(ctx, "dataDir", s.dataDir)
 		ctx = context.WithValue(ctx, "thumbDir", s.thumbDir)
+		ctx = context.WithValue(ctx, "badger", s.db)
 		next.ServeHTTP(w, r.WithContext(ctx))
 	})
 }

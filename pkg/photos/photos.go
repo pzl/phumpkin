@@ -58,33 +58,16 @@ func (m *Mgr) Start(ctx context.Context) error {
 	m.indexer.photoDir = photoDir
 	m.indexer.log = m.log
 
-	db, err := badger.Open(badger.DefaultOptions(ctx.Value("dataDir").(string)))
-	if err != nil {
-		return err
-	}
-	m.db = db
-	m.indexer.db = db
-	go func() {
-		<-ctx.Done()
-		m.Close()
-	}()
+	m.db = ctx.Value("badger").(*badger.DB)
+	m.indexer.db = m.db
 	if err := m.indexer.StartWatcher(ctx); err != nil {
-		m.Close()
 		return err
 	}
 	if err := m.indexer.Watch(photoDir); err != nil {
-		m.Close()
 		return err
 	}
 	go m.indexer.Index("", true) // recursively index the photoDir
 	return nil
-}
-
-func (m *Mgr) Close() {
-	if m.db != nil {
-		m.db.Close()
-		m.db = nil
-	}
 }
 
 // gets data, from DB if possible, otherwise reads directly
