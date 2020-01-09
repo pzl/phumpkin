@@ -6,6 +6,7 @@ import (
 	"errors"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"time"
 
@@ -69,6 +70,41 @@ func (s Size) Int() int {
 // https://stackoverflow.com/questions/52161555/how-to-custom-marshal-map-keys-in-json
 func (s Size) MarshalText() ([]byte, error) { return []byte(s.String()), nil }
 
+/* -- XMP struct --- */
+
+type XMP struct {
+	DerivedFromFile string        `json:"derived_from"`
+	Rating          int           `json:"rating"`
+	Location        *Location     `json:"loc,omitempty"`
+	AutoPresets     bool          `json:"auto_presets_applied"`
+	XMPVersion      int           `json:"xmp_version"`
+	ColorLabels     []string      `json:"color_labels,omitempty"`
+	Creator         string        `json:"creator,omitempty"`
+	History         []DTOperation `json:"history,omitempty"`
+	Rights          string        `json:"rights"`
+	Tags            []string      `json:"tags,omitempty"`
+	Title           string        `json:"title,omitempty"`
+}
+
+type Location struct {
+	Lat      string `json:"lat"`
+	Lon      string `json:"lon"`
+	Altitude string `json:"alt"`
+}
+
+type DTOperation struct {
+	Name           string `json:"name"`
+	Number         string `json:"num"`
+	Enabled        bool   `json:"enabled"`
+	ModVersion     int    `json:"modversion"`
+	Params         string `json:"params"`
+	MultiName      string `json:"multi_name"`
+	MultiPriority  int    `json:"multi_priority"`
+	BlendOpVersion int    `json:"blendop_version"`
+	BlendOpParams  string `json:"blendop_params"`
+	IOPOrder       string `json:"iop_order"`
+}
+
 /*
 	data to track:
 		- source file (jpg, raw)
@@ -98,8 +134,8 @@ type Photo struct {
 	exifRead bool
 	exif     map[string]interface{}
 
-	metaRead bool
-	meta     Meta
+	xmpRead bool // detecting zero value may not work, since xmp may not exist. Need to know if we tried
+	xmp     XMP
 
 	// cached fields
 	filesize       int64
@@ -200,15 +236,121 @@ func (p *Photo) LastMod() time.Time {
 	return x
 }
 
-func (p *Photo) Meta() (Meta, error) {
-	if !p.metaRead && p.HasXMP() {
-		if err := p.loadXmp(); err != nil {
-			return Meta{}, err
+// retrieve a value from XMP if available, falling back to exif
+func (p *Photo) Meta(field string) (interface{}, error) {
+	if p.HasXMP() {
+		x, xload_err := p.XMP()
+		switch field {
+		case "DerivedFromFile":
+			return x.DerivedFromFile, xload_err
+		case "AutoPresets":
+			return x.AutoPresets, xload_err
+		case "XMPVersion":
+			return x.XMPVersion, xload_err
+		case "ColorLabels":
+			return x.ColorLabels, xload_err
+		case "History":
+			return x.History, xload_err
+		case "Tags":
+			return x.Tags, xload_err
+		case "Title":
+			return x.Title, xload_err
+
+		// the below cases can be backfilled from Exif data
+		case "Location":
+			if xload_err == nil && x.Location != nil {
+				return x.Location, nil
+			}
+		case "Rating":
+			if xload_err == nil && x.DerivedFromFile != "" { // DFF always populated if XMP read
+				return x.Rating, nil
+			}
+		case "Rights", "Copyright":
+			if xload_err == nil && x.Rights != "" {
+				return x.Rights, nil
+			}
+			field = "Copyright" // translate to EXIF name
+		case "Creator", "Artist":
+			if xload_err == nil && x.Creator != "" {
+				return x.Creator, nil
+			}
+			field = "Artist" // translate to EXIF name
 		}
 	}
-	return p.meta, nil
+
+	// could not look up via XMP, check EXIF
+
+	ex, err := p.Exif()
+	if err != nil {
+		return nil, err
+	}
+
+	v, has := ex[field]
+	if !has {
+		// @todo: key not found? is that an error?
+		return nil, nil
+	}
+
+	return v, nil
 }
 
+// retrieve a meta value as a string, swallowing errors and returning empty string
+// if not exists, or error
+func (p *Photo) MetaString(field string) string {
+	v, _ := p.Meta(field)
+
+	if v == nil {
+		return ""
+	}
+
+	s, ok := v.(string)
+	if !ok {
+		return ""
+	}
+	return s
+}
+
+// retrieve a meta value as an int, swallowing errors and returning 0
+// if not exists, or error
+func (p *Photo) MetaInt(field string) int {
+	v, _ := p.Meta(field)
+
+	if v == nil {
+		return 0
+	}
+
+	switch n := v.(type) {
+	case int:
+		return n
+	case float64:
+		return int(n)
+	case string:
+		if i, err := strconv.Atoi(n); err == nil {
+			return i
+		}
+	case bool:
+		if n {
+			return 1
+		} else {
+			return 0
+		}
+	}
+
+	return 0
+}
+
+// get photo's XMP data. Will use a cache if already populated.
+// will return an empty XMP{} if there is no XMP file
+func (p *Photo) XMP() (XMP, error) {
+	if !p.xmpRead && p.HasXMP() {
+		if err := p.loadXmp(); err != nil {
+			return XMP{}, err
+		}
+	}
+	return p.xmp, nil
+}
+
+// get associated Exif data, possibly from cache.
 func (p *Photo) Exif() (map[string]interface{}, error) {
 	if !p.exifRead {
 		if err := p.loadExif(); err != nil {
@@ -379,7 +521,7 @@ func (p *Photo) loadXmp() error {
 		return err
 	}
 
-	var loader func() (Meta, error)
+	var loader func() (XMP, error)
 	if err != nil || p.ModTime().After(t) {
 		loader = p.loadXMPFromFile // @todo: write to DB if used?
 	} else {
@@ -389,13 +531,13 @@ func (p *Photo) loadXmp() error {
 	if err != nil {
 		return err
 	}
-	p.meta = m
-	p.metaRead = true
+	p.xmp = m
+	p.xmpRead = true
 	return nil
 }
 
-func (p *Photo) loadXMPFromFile() (Meta, error) { return ReadXMP(p.Src + ".xmp") }
-func (p *Photo) loadXMPFromDB() (Meta, error) {
+func (p *Photo) loadXMPFromFile() (XMP, error) { return ReadXMP(p.Src + ".xmp") }
+func (p *Photo) loadXMPFromDB() (XMP, error) {
 	return readXMPDB(p.ctx.Value("badger").(*badger.DB), p.Relpath())
 }
 
@@ -441,7 +583,7 @@ func (p Photo) MarshalJSON() ([]byte, error) {
 		Size        int64                  `json:"size"`
 		Rotation    string                 `json:"rotation"`
 		Orientation int                    `json:"orientation"`
-		Meta        Meta                   `json:"meta"`
+		XMP         XMP                    `json:"xmp"`
 		Exif        map[string]interface{} `json:"exif"`
 		Thumbs      map[Size]Resource      `json:"thumbs"`
 		Original    Resource               `json:"original"`
@@ -452,25 +594,24 @@ func (p Photo) MarshalJSON() ([]byte, error) {
 		return nil, err
 	}
 
-	ex, err := p.Exif()
+	exif, err := p.Exif()
 	if err != nil {
 		return nil, err
 	}
 
-	m, err := p.Meta()
+	xmp, err := p.XMP()
 	if err != nil {
 		return nil, err
 	}
 
-	// @todo: backfill empty meta values from exif?
 	w, h := p.Size()
 	host := p.ctx.Value("host").(string)
 	relpath := p.Relpath()
 	j := PhotoJSON{
 		Name:        relpath,
 		Size:        fs,
-		Meta:        m,
-		Exif:        ex,
+		XMP:         xmp,
+		Exif:        exif,
 		Rotation:    p.Rotation().String(),
 		Orientation: int(p.Orientation()),
 		Thumbs:      p.ThumbSizes(),

@@ -95,14 +95,14 @@ func (idx *Indexer) indexFile(file string, xmp bool, exif bool, batcher *badger.
 	l := idx.log.WithField("file", file)
 	fullpath := filepath.Join(idx.photoDir, file)
 	if xmp {
-		if meta, err := ReadXMP(fullpath + ".xmp"); err != nil {
+		if x, err := ReadXMP(fullpath + ".xmp"); err != nil {
 			l.WithError(err).Error("error reading XMP file")
 		} else {
 			l.Debug("indexing XMP data")
 			if batcher != nil {
-				writeXMPBatch(l, batcher, file, meta)
+				writeXMPBatch(l, batcher, file, x)
 			} else {
-				writeXMP(l, idx.db, file, meta)
+				writeXMP(l, idx.db, file, x)
 			}
 		}
 	}

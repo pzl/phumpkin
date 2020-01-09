@@ -106,22 +106,22 @@ func writeEntries(e EntrySetter, key string, d []byte, t []byte) error {
 
 /* ----------- XMP ------------- */
 
-func readXMPDB(db *badger.DB, file string) (Meta, error) {
+func readXMPDB(db *badger.DB, file string) (XMP, error) {
 	if file[0:1] == "/" {
-		return Meta{}, fmt.Errorf("photoDir-relative path expected. Got %s when calling readXMPDB", file)
+		return XMP{}, fmt.Errorf("photoDir-relative path expected. Got %s when calling readXMPDB", file)
 	}
-	m := Meta{}
-	if err := fetchJSON(db, file+".XMP", &m); err != nil {
-		return Meta{}, err
+	x := XMP{}
+	if err := fetchJSON(db, file+".XMP", &x); err != nil {
+		return XMP{}, err
 	}
-	return m, nil
+	return x, nil
 }
 
-func writeXMP(log logrus.FieldLogger, db *badger.DB, file string, m Meta) {
+func writeXMP(log logrus.FieldLogger, db *badger.DB, file string, x XMP) {
 	if file[0:1] == "/" {
 		log.WithField("file", file).Error("photoDir-relative path expected")
 	}
-	d, t, err := marshalForWrite(m)
+	d, t, err := marshalForWrite(x)
 	if err != nil {
 		log.WithError(err).Error("error preparing XMP for write. Unable to write to DB")
 		return
@@ -136,11 +136,11 @@ func writeXMP(log logrus.FieldLogger, db *badger.DB, file string, m Meta) {
 	}
 }
 
-func writeXMPBatch(log logrus.FieldLogger, batch *badger.WriteBatch, file string, m Meta) {
+func writeXMPBatch(log logrus.FieldLogger, batch *badger.WriteBatch, file string, x XMP) {
 	if file[0:1] == "/" {
 		log.WithField("file", file).Error("photoDir-relative path expected")
 	}
-	d, t, err := marshalForWrite(m)
+	d, t, err := marshalForWrite(x)
 	if err != nil {
 		log.WithError(err).Error("unable to prep XMP for write. Not writing to batch")
 		return

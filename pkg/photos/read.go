@@ -14,7 +14,6 @@ import (
 )
 
 // ---------------- XMP parsing -----------
-
 type DTXMP struct {
 	Description *struct {
 		DerivedFrom          string   `xml:"DerivedFrom,attr"`
@@ -57,41 +56,41 @@ type DTXMP struct {
 }
 
 // read the contents of an XMP file. Absolute path expected
-func ReadXMP(file string) (Meta, error) {
+func ReadXMP(file string) (XMP, error) {
 
 	f, err := ioutil.ReadFile(file)
 	if err != nil {
-		return Meta{}, err
+		return XMP{}, err
 	}
 
 	var d DTXMP
 
 	if err := xml.Unmarshal(f, &d); err != nil {
-		return Meta{}, err
+		return XMP{}, err
 	}
 
 	rating, err := strconv.Atoi(d.Description.Rating)
 	if err != nil {
-		return Meta{}, err
+		return XMP{}, err
 	}
 	xmpV, err := strconv.Atoi(d.Description.DTXMPVersion)
 	if err != nil {
-		return Meta{}, err
+		return XMP{}, err
 	}
 
 	ops := make([]DTOperation, len(d.Description.DTHistory))
 	for i, h := range d.Description.DTHistory {
 		mv, err := strconv.Atoi(h.ModVersion)
 		if err != nil {
-			return Meta{}, err
+			return XMP{}, err
 		}
 		mp, err := strconv.Atoi(h.MultiPriority)
 		if err != nil {
-			return Meta{}, err
+			return XMP{}, err
 		}
 		bv, err := strconv.Atoi(h.BlendOpVersion)
 		if err != nil {
-			return Meta{}, err
+			return XMP{}, err
 		}
 		ops[i] = DTOperation{
 			Name:           h.Operation,
@@ -116,7 +115,7 @@ func ReadXMP(file string) (Meta, error) {
 		}
 	}
 
-	return Meta{
+	return XMP{
 		DerivedFromFile: d.Description.DerivedFrom,
 		Rating:          rating,
 		AutoPresets:     d.Description.DTAutoPresetsApplied == "1",

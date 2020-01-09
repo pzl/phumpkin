@@ -123,18 +123,10 @@ func (a Action) List(ctx context.Context, lr ListReq) ([]photos.Photo, []string,
 				})
 				return srt
 			case "rating":
-				ma, err := files[i].Meta()
-				if err != nil {
-					return false
-				}
-				mb, err := files[j].Meta()
-				if err != nil {
-					return false
-				}
 				if lr.Asc {
-					return ma.Rating < mb.Rating
+					return files[i].MetaInt("Rating") < files[j].MetaInt("Rating")
 				} else {
-					return ma.Rating > mb.Rating
+					return files[i].MetaInt("Rating") > files[j].MetaInt("Rating")
 				}
 			}
 

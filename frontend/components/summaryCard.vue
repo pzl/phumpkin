@@ -1,13 +1,13 @@
 <template>
 	<v-card outlined  class="ma-2 mb-5 summary-card" :max-height="600">
 		<v-card-title>{{name}} <sup><v-icon small v-if="exif.Make" :title="exif.Model">mdi-{{ camera_icon }}</v-icon></sup></v-card-title>
-		<v-card-subtitle><rating :readonly="true" :value="meta.rating" /></v-card-subtitle>
+		<v-card-subtitle><rating :readonly="true" :value="xmp.rating" /></v-card-subtitle>
 
 		<v-tabs grow v-model="tab" height="20px">
 			<v-tab style="min-width: 20px" class="pa-0" href="#basic"><v-icon small>mdi-calendar-blank</v-icon></v-tab>
 			<v-tab style="min-width: 20px" class="pa-0" href="#shot-info"><v-icon small>mdi-camera-iris</v-icon></v-tab>
 			<v-tab style="min-width: 20px" class="pa-0" href="#tags"><v-icon small>mdi-tag-heart</v-icon></v-tab>
-			<v-tab style="min-width: 20px" class="pa-0" href="#edits" v-if="meta.history && meta.history.length"><v-icon small>mdi-image-edit</v-icon></v-tab>
+			<v-tab style="min-width: 20px" class="pa-0" href="#edits" v-if="xmp.history && xmp.history.length"><v-icon small>mdi-image-edit</v-icon></v-tab>
 			<v-tab style="min-width: 20px" class="pa-0" href="#copy"><v-icon small>mdi-copyright</v-icon></v-tab>
 		</v-tabs>
 
@@ -17,7 +17,7 @@
 					<div>{{ sizeof }}</div>
 					<div>{{ original.width }}x{{ original.height }}</div>
 					<div v-if="taken">{{taken}}</div>
-					<div class="loc" v-if="meta.loc"><v-icon small>mdi-map-marker</v-icon> {{ meta.loc.lat }}, {{ meta.loc.lon }}<span v-if="meta.loc.alt">, {{ meta.loc.alt }}</span></div>
+					<div class="loc" v-if="xmp.loc"><v-icon small>mdi-map-marker</v-icon> {{ xmp.loc.lat }}, {{ xmp.loc.lon }}<span v-if="xmp.loc.alt">, {{ xmp.loc.alt }}</span></div>
 				</v-tab-item>
 				<v-tab-item value="shot-info">
 					<v-row no-gutters justify="space-between">
@@ -64,9 +64,9 @@
 							<v-chip :color="c.toLowerCase()" small></v-chip>
 						</v-col>
 					</v-row>
-					<tag-crumbs v-if="meta.tags && meta.tags.length" :tags="meta.tags" />
+					<tag-crumbs v-if="xmp.tags && xmp.tags.length" :tags="xmp.tags" />
 				</v-tab-item>
-				<v-tab-item value="edits" v-if="meta.history && meta.history.length">
+				<v-tab-item value="edits" v-if="xmp.history && xmp.history.length">
 					<div class="d-flex">
 						<span>History</span>
 						<v-spacer />
@@ -76,7 +76,7 @@
 					<v-expand-transition>
 						<div v-if="show_history">
 							<v-list dense>
-								<v-list-item v-for="(h,i) in meta.history" :key="i" class="pa-0">
+								<v-list-item v-for="(h,i) in xmp.history" :key="i" class="pa-0">
 										<v-list-item-title style="flex-grow: 11">{{ h.name }}</v-list-item-title>
 										<v-list-item-subtitle v-if="h.multi_name">{{ h.multi_name }}</v-list-item-subtitle>
 										<v-list-item-icon>
@@ -88,8 +88,8 @@
 					</v-expand-transition>
 				</v-tab-item>
 				<v-tab-item value="copy">
-					<div v-if="meta.creator">Creator: {{ meta.creator }}</div>
-					<div v-if="meta.rights">Rights: {{ meta.rights }}</div>
+					<div v-if="xmp.creator">Creator: {{ xmp.creator }}</div>
+					<div v-if="xmp.rights">Rights: {{ xmp.rights }}</div>
 				</v-tab-item>
 			</v-tabs-items>
 		</v-card-text>
@@ -106,7 +106,7 @@
 
 				<v-card :max-height="500">
 					<v-card-text class="text--primary xmp-popout">
-						<pre>{{ JSON.stringify({"meta":meta,"exif":exif}, null, 2) }}</pre>
+						<pre>{{ JSON.stringify({"xmp":xmp,"exif":exif}, null, 2) }}</pre>
 					</v-card-text>
 				</v-card>
 			</v-menu>
@@ -125,7 +125,7 @@ export default {
 		name: {},
 		dir: {},
 		size: {}, // in bytes
-		meta: {}, //
+		xmp: {}, //
 		exif: {},
 		thumbs: {}, // full: { url: "...", width: n, height: n}
 		original: {}, //{ url: "...", width: n, height: n}
@@ -150,7 +150,7 @@ export default {
 			return b.toFixed(2)+" "+units[unit]
 		},
 		camera_icon() {
-			if (!this.meta || !this.exif || !this.exif.Make) {
+			if (!this.exif || !this.exif.Make) {
 				return ''
 			}
 			switch (this.exif.Make) {
@@ -160,7 +160,7 @@ export default {
 			}
 		},
 		batt() {
-			if (!this.meta || !this.exif || !this.exif.BatteryLevel) {
+			if (!this.exif || !this.exif.BatteryLevel) {
 				return null
 			}
 			const lvl = parseInt(this.exif.BatteryLevel.replace('%',''), 10)
@@ -238,10 +238,10 @@ export default {
 			return format(parseISO(d), "PPpp")
 		},
 		colors() {
-			if (!this.meta || !this.meta.color_labels || !this.meta.color_labels.length) {
+			if (!this.xmp || !this.xmp.color_labels || !this.xmp.color_labels.length) {
 				return null
 			}
-			return this.meta.color_labels.map(c => {
+			return this.xmp.color_labels.map(c => {
 				switch (c) {
 					case "0": return "Red"
 					case "1": return "Yellow"

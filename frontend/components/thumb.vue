@@ -87,7 +87,7 @@ export default {
 		rating: {},
 		rotation: {}, // 0-7 int
 		tags: {}, // array of strings
-		meta: {}, //
+		xmp: {}, //
 		loc: {}, // null or {lat:'', lon:''}
 		thumbs: {}, // full: { url: "...", width: n, height: n}
 		original: {}, //{ url: "...", width: n, height: n}
@@ -107,7 +107,7 @@ export default {
 			return this.selected.includes(this.index)
 		},
 		display_rating() {
-			return this.hover_reject ? 0 : this.meta.rating
+			return this.hover_reject ? 0 : this.xmp.rating
 		},
 		src() {
 			if (this.srcOverride) {

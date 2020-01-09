@@ -298,16 +298,27 @@ func (ph *PhotoHandler) Websocket(w http.ResponseWriter, r *http.Request) {
 				resp.Error = "file expected to be a string"
 				break
 			}
-			if p, err := photos.FromSrc(r.Context(), photoDir+"/"+file); err != nil {
+			p, err := photos.FromSrc(r.Context(), photoDir+"/"+file)
+			if err != nil {
 				log.WithError(err).Error("failed to get meta info")
 				resp.Error = "failed to get meta info"
-			} else {
-				if m, err := p.Meta(); err != nil {
-					resp.Error = "failed to load meta info"
-				} else {
-					resp.Data = m
-				}
+				break
 			}
+			x, err := p.XMP()
+			if err != nil {
+				resp.Error = "failed to load meta info"
+				break
+			}
+			ex, err := p.Exif()
+			if err != nil {
+				resp.Error = "failed to load exif info"
+				break
+			}
+			resp.Data = map[string]interface{}{
+				"xmp":  x,
+				"exif": ex,
+			}
+
 		case "":
 			resp.Error = "missing action"
 		default:
