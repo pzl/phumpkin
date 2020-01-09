@@ -2,6 +2,7 @@ package photos
 
 import (
 	"encoding/json"
+	"fmt"
 	"time"
 
 	"github.com/dgraph-io/badger"
@@ -40,6 +41,18 @@ func getValue(tx *badger.Txn, key []byte) ([]byte, error) {
 	return v, nil
 }
 
+func fetchJSON(db *badger.DB, key string, v interface{}) error {
+	return db.View(func(tx *badger.Txn) error {
+		if data, err := getValue(tx, []byte(key)); err != nil {
+			return err
+		} else {
+			if err := json.Unmarshal(data, v); err != nil {
+				return err
+			}
+		}
+		return nil
+	})
+}
 
 func marshalForWrite(v interface{}) ([]byte, []byte, error) {
 	d, err := json.Marshal(v)
@@ -69,6 +82,19 @@ func writeEntries(e EntrySetter, key string, d []byte, t []byte) error {
 		return err
 	}
 	return nil
+}
+
+/* ----------- XMP ------------- */
+
+func readXMPDB(db *badger.DB, file string) (Meta, error) {
+	if file[0:1] == "/" {
+		return Meta{}, fmt.Errorf("photoDir-relative path expected. Got %s when calling readXMPDB", file)
+	}
+	m := Meta{}
+	if err := fetchJSON(db, file+".XMP", &m); err != nil {
+		return Meta{}, err
+	}
+	return m, nil
 }
 
 func writeXMP(log logrus.FieldLogger, db *badger.DB, file string, m Meta) {
@@ -109,7 +135,19 @@ func writeXMPBatch(log logrus.FieldLogger, batch *badger.WriteBatch, file string
 	log.WithField("file", file).Trace("wrote XMP data to batch")
 }
 
+/* ------------ EXIF ---------- */
 
+func readExifDB(db *badger.DB, file string) (map[string]interface{}, error) {
+	if file[0:1] == "/" {
+		return nil, fmt.Errorf("photoDir-relative path expected. Got %s when calling readExifDB", file)
+	}
+	ex := make(map[string]interface{})
+
+	if err := fetchJSON(db, file+".EXIF", &ex); err != nil {
+		return nil, err
+	}
+	return ex, nil
+}
 
 func writeEXIF(log logrus.FieldLogger, db *badger.DB, file string, e map[string]interface{}) {
 	if file[0:1] == "/" {
