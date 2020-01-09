@@ -29,13 +29,14 @@ type Resource struct {
 	Width  int    `json:"width"`
 	Height int    `json:"height"`
 }
+
 type FileInfo struct {
 	Name     string              `json:"name"`
 	Size     int64               `json:"size"`
 	Dir      bool                `json:"-"`
 	Rotation int                 `json:"rotation"`
 	Meta     *photos.Meta        `json:"meta"`
-	Thumbs   map[string]Resource `json:"thumbs"`
+	Thumbs   map[photos.Size]Resource `json:"thumbs"`
 	Original Resource            `json:"original"`
 }
 
@@ -135,26 +136,26 @@ func (a Action) List(ctx context.Context, lr ListReq) ([]FileInfo, []string, err
 			}
 		}
 
-		thumbs := make(map[string]Resource)
-		for _, s := range Sizes {
+		thumbs := make(map[photos.Size]Resource)
+		for _, s := range []photos.Size{photos.SizeXS, photos.SizeSmall, photos.SizeMedium, photos.SizeLarge, photos.SizeXL, photos.SizeFull} {
 			var rw int
 			var rh int
 
 			if w > h {
-				rw = s.Max
+				rw = int(s)
 				rh = int(float64(h) / (float64(w) / float64(rw)))
 			} else {
-				rh = s.Max
+				rh = int(s)
 				rw = int(float64(w) / (float64(h) / float64(rh)))
 			}
 
-			if s.Name == "full" {
+			if s == photos.SizeFull {
 				rw = w
 				rh = h
 			}
 
-			thumbs[s.Name] = Resource{
-				URL:    "http://" + r.Host + "/api/v1/thumb/" + s.Name + "/" + thumbExt(relpath),
+			thumbs[s] = Resource{
+				URL:    "http://" + r.Host + "/api/v1/thumb/" + s.String() + "/" + thumbExt(relpath),
 				Width:  rw,
 				Height: rh,
 			}
@@ -235,7 +236,7 @@ func (a Action) List(ctx context.Context, lr ListReq) ([]FileInfo, []string, err
 
 type SizeReq struct {
 	File    string
-	Size    string
+	Size    photos.Size
 	B64     bool
 	Purpose string
 }
@@ -246,7 +247,7 @@ func (a Action) GetSize(ctx context.Context, sr SizeReq) (string, error) {
 	thumbDir := ctx.Value("thumbDir").(string)
 
 	filepath := photoDir + "/" + sr.File
-	thumbpath := thumbDir + "/" + sr.Size + "/" + thumbExt(sr.File)
+	thumbpath := thumbDir + "/" + sr.Size.String() + "/" + thumbExt(sr.File)
 
 	log.WithFields(logrus.Fields{
 		"size": sr.Size,
@@ -278,33 +279,28 @@ func (a Action) GetSize(ctx context.Context, sr SizeReq) (string, error) {
 		l.Debug("generating thumb on the fly")
 		src := filepath
 
-		// if there is a larger thumb that is still up-to-date, generate from that.
+		// if there is a larger size thumbnail that is still up-to-date, generate from that.
 		// it's quicker than using a huge ARW
-
-		for _, s := range Sizes {
-			if sr.Size == "full" { // no larger thumb
-				continue
-			}
-			if s.Name == sr.Size { // skip yourself
-				continue
-			}
-			if s.Max < Px(sr.Size) && s.Max != 0 {
-				continue // thumb is smaller, except 'full' size
-			}
-			bigthumb := thumbDir + "/" + s.Name + "/" + thumbExt(sr.File)
-			if ti, err := os.Stat(bigthumb); err == nil {
-				if ti.ModTime().After(srcinfo.ModTime()) {
-					src = bigthumb
-					break
+		if sr.Size < photos.SizeFull { // "full" will not have anything larger
+			for _, s := range []photos.Size{photos.SizeXS, photos.SizeSmall, photos.SizeMedium, photos.SizeLarge, photos.SizeXL, photos.SizeFull} {
+				if sr.Size >= s { // skip anything smaller than request
+					continue
+				}
+				bigthumb := thumbDir + "/" + s.String() + "/" + thumbExt(sr.File)
+				if ti, err := os.Stat(bigthumb); err == nil {
+					if ti.ModTime().After(lastMod) {
+						src = bigthumb
+						break
+					}
 				}
 			}
 		}
 
-		if sr.Size == "x-small" || src != filepath {
+		if sr.Size == photos.SizeXS || src != filepath {
 			// quick trickery using vips
 
 			l.Trace("resizing with vips")
-			if err := photos.Resize(src, thumbpath, Px(sr.Size)); err != nil {
+			if err := photos.Resize(src, thumbpath, sr.Size.Int()); err != nil {
 				l.WithField("src", src).WithField("dest", thumbpath).WithError(err).Error("error resizing with vips")
 				return "", err
 			}
@@ -318,7 +314,7 @@ func (a Action) GetSize(ctx context.Context, sr SizeReq) (string, error) {
 				opts = append(opts, darktable.SetXMP(xmp))
 			}
 
-			job := a.s.darktable.CreateJob(src, thumbpath, Px(sr.Size), opts...)
+			job := a.s.darktable.CreateJob(src, thumbpath, sr.Size.Int(), opts...)
 			priority := darktable.PR_NORMAL
 			switch sr.Purpose {
 			case "lazysrc":
@@ -344,7 +340,7 @@ func (a Action) GetSize(ctx context.Context, sr SizeReq) (string, error) {
 	l.Debug("sending thumb file")
 
 	if !sr.B64 {
-		return "http://" + gethost(ctx) + "/api/v1/thumb/" + sr.Size + "/" + thumbExt(sr.File), nil
+		return "http://" + gethost(ctx) + "/api/v1/thumb/" + sr.Size.String() + "/" + thumbExt(sr.File), nil
 	}
 
 	// read into b64

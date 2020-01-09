@@ -11,6 +11,7 @@ import (
 
 	"github.com/go-chi/chi"
 	"github.com/pzl/mstk/logger"
+	"github.com/pzl/phumpkin/pkg/photos"
 	"nhooyr.io/websocket"
 	"nhooyr.io/websocket/wsjson"
 )
@@ -73,7 +74,7 @@ func (ph *PhotoHandler) GetThumb(w http.ResponseWriter, r *http.Request) {
 	photoDir := r.Context().Value("photoDir").(string)
 	thumbDir := r.Context().Value("thumbDir").(string)
 
-	size := chi.URLParam(r, "size")
+	size := photos.ParseSize(chi.URLParam(r, "size"))
 	path := chi.URLParam(r, "*")
 
 	// look for original file
@@ -106,7 +107,7 @@ func (ph *PhotoHandler) GetThumb(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	fp := thumbDir + "/" + size + "/" + path
+	fp := thumbDir + "/" + size.String() + "/" + path
 	log.WithField("file", fp).Debug("sending thumb file")
 	http.ServeFile(w, r, fp)
 }
@@ -256,7 +257,7 @@ func (ph *PhotoHandler) Websocket(w http.ResponseWriter, r *http.Request) {
 					resp.Error = "size expected to be a string"
 					break
 				} else {
-					sr.Size = ss
+					sr.Size = photos.ParseSize(ss)
 				}
 			}
 			if b64, ok := req.Params["b64"]; ok {
@@ -313,33 +314,9 @@ func (ph *PhotoHandler) Websocket(w http.ResponseWriter, r *http.Request) {
 	}
 
 	c.Close(websocket.StatusNormalClosure, "k im done with you")
-
 }
 
 // ------------ helpers / internal funcs
-
-type Size struct {
-	Name string
-	Max  int
-}
-
-var Sizes = []Size{
-	{"x-small", 10},
-	{"small", 200},
-	{"medium", 800},
-	{"large", 1200},
-	{"x-large", 2000},
-	{"full", 0},
-}
-
-func Px(s string) int {
-	for _, n := range Sizes {
-		if s == n.Name {
-			return n.Max
-		}
-	}
-	return 800
-}
 
 func thumbExt(filename string) string {
 	r := strings.NewReplacer(
