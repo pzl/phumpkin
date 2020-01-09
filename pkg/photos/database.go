@@ -72,6 +72,9 @@ func writeEntries(e EntrySetter, key string, d []byte, t []byte) error {
 }
 
 func writeXMP(log logrus.FieldLogger, db *badger.DB, file string, m Meta) {
+	if file[0:1] == "/" {
+		log.WithField("file", file).Error("photoDir-relative path expected")
+	}
 	d, t, err := marshalForWrite(m)
 	if err != nil {
 		log.WithError(err).Error("error preparing XMP for write. Unable to write to DB")
@@ -88,6 +91,9 @@ func writeXMP(log logrus.FieldLogger, db *badger.DB, file string, m Meta) {
 }
 
 func writeXMPBatch(log logrus.FieldLogger, batch *badger.WriteBatch, file string, m Meta) {
+	if file[0:1] == "/" {
+		log.WithField("file", file).Error("photoDir-relative path expected")
+	}
 	d, t, err := marshalForWrite(m)
 	if err != nil {
 		log.WithError(err).Error("unable to prep XMP for write. Not writing to batch")
@@ -106,6 +112,9 @@ func writeXMPBatch(log logrus.FieldLogger, batch *badger.WriteBatch, file string
 
 
 func writeEXIF(log logrus.FieldLogger, db *badger.DB, file string, e map[string]interface{}) {
+	if file[0:1] == "/" {
+		log.WithField("file", file).Error("photoDir-relative path expected")
+	}
 	d, t, err := marshalForWrite(e)
 	if err != nil {
 		log.WithError(err).Error("unable to prep EXIF data for writing")
@@ -122,6 +131,9 @@ func writeEXIF(log logrus.FieldLogger, db *badger.DB, file string, e map[string]
 }
 
 func writeEXIFBatch(log logrus.FieldLogger, batch *badger.WriteBatch, file string, e map[string]interface{}) {
+	if file[0:1] == "/" {
+		log.WithField("file", file).Error("photoDir-relative path expected")
+	}
 	d, t, err := marshalForWrite(e)
 	if err != nil {
 		log.WithError(err).Error("unable to prep EXIF data for writing to batch")
