@@ -3,6 +3,7 @@ package darktable
 import (
 	"encoding/binary"
 	"encoding/hex"
+	"encoding/json"
 	"math"
 )
 
@@ -35,6 +36,13 @@ const (
 	ExposureModeManual ExposureMode = iota
 	ExposureModeDeflicker
 )
+
+func (e ExposureMode) MarshalJSON() ([]byte, error) {
+	if e == ExposureModeManual {
+		return json.Marshal("manual")
+	}
+	return json.Marshal("deflicker")
+}
 
 type ExposureParams struct {
 	Mode            ExposureMode `json:"mode"`
