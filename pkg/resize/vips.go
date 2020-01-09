@@ -1,4 +1,4 @@
-package photos
+package resize
 
 import (
 	"errors"
@@ -12,7 +12,7 @@ import (
 	"github.com/DAddYE/vips"
 )
 
-func Resize(src string, dest string, px int) error {
+func Quick(src string, dest string, px int) error {
 	var in []byte
 	var err error
 

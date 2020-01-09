@@ -11,8 +11,8 @@ import (
 	"github.com/go-chi/chi"
 	"github.com/pzl/mstk"
 	"github.com/pzl/mstk/logger"
-	"github.com/pzl/phumpkin/pkg/darktable"
 	"github.com/pzl/phumpkin/pkg/photos"
+	"github.com/pzl/phumpkin/pkg/resize"
 	"github.com/sirupsen/logrus"
 )
 
@@ -27,18 +27,17 @@ type server struct {
 	assets       http.Handler
 	router       *chi.Mux
 	PhotoHandler PhotoHandler
-	darktable    *darktable.Exporter
+	resizer      *resize.Resizer
 	actions      Action
 	mgr          *photos.Mgr
 }
 
 func New(options ...OptFunc) *server {
-	d := darktable.New()
 	s := &server{
-		Server:    mstk.NewServer(),
-		router:    chi.NewRouter(),
-		darktable: d,
-		mgr:       photos.New(),
+		Server:  mstk.NewServer(),
+		router:  chi.NewRouter(),
+		resizer: resize.New(),
+		mgr:     photos.New(),
 	}
 	s.PhotoHandler.s = s
 	s.actions.s = s
@@ -71,7 +70,7 @@ func (s *server) Start(ctx context.Context) (err error) {
 	if err := s.mgr.Start(c); err != nil {
 		return err
 	}
-	s.darktable.Start(c)
+	s.resizer.Start(c)
 	return s.Server.Start(c)
 }
 

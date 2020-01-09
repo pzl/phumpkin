@@ -12,8 +12,8 @@ import (
 	"strings"
 
 	"github.com/pzl/mstk/logger"
-	"github.com/pzl/phumpkin/pkg/darktable"
 	"github.com/pzl/phumpkin/pkg/photos"
+	"github.com/pzl/phumpkin/pkg/resize"
 	"github.com/saracen/walker"
 	"github.com/sirupsen/logrus"
 )
@@ -202,7 +202,7 @@ func (a Action) GetSize(ctx context.Context, sr SizeReq) (string, error) {
 			// quick trickery using vips
 
 			l.Trace("resizing with vips")
-			if err := photos.Resize(src, thumbpath, sr.Size.Int()); err != nil {
+			if err := resize.Quick(src, thumbpath, sr.Size.Int()); err != nil {
 				l.WithField("src", src).WithField("dest", thumbpath).WithError(err).Error("error resizing with vips")
 				return "", err
 			}
@@ -211,20 +211,20 @@ func (a Action) GetSize(ctx context.Context, sr SizeReq) (string, error) {
 			// small-or-above request, resize using darktable
 
 			// if using raw file, use XMP as a parameter
-			opts := make([]darktable.JobOpt, 0, 1)
+			opts := make([]resize.JobOpt, 0, 1)
 			if src == filepath {
-				opts = append(opts, darktable.SetXMP(xmp))
+				opts = append(opts, resize.SetXMP(xmp))
 			}
 
-			job := a.s.darktable.CreateJob(src, thumbpath, sr.Size.Int(), opts...)
-			priority := darktable.PR_NORMAL
+			job := a.s.resizer.CreateJob(src, thumbpath, sr.Size.Int(), opts...)
+			priority := resize.PR_NORMAL
 			switch sr.Purpose {
 			case "lazysrc":
-				priority = darktable.PR_HIGH
+				priority = resize.PR_HIGH
 			case "viewer":
-				priority = darktable.PR_IMMEDIATE
+				priority = resize.PR_IMMEDIATE
 			}
-			a.s.darktable.Add(job, priority)
+			a.s.resizer.Add(job, priority)
 			select {
 			case <-job.Done:
 				l.Trace("thumb generation job complete")

@@ -17,6 +17,7 @@ require (
 	github.com/shurcooL/vfsgen v0.0.0-20181202132449-6a9ea43bcacd // indirect
 	github.com/sirupsen/logrus v1.4.2
 	github.com/spf13/pflag v1.0.5
+	golang.org/x/image v0.0.0-20191214001246-9130b4cfad52 // indirect
 	golang.org/x/sys v0.0.0-20200106162015-b016eb3dc98e // indirect
 	nhooyr.io/websocket v1.7.4
 )
