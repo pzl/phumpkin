@@ -173,6 +173,24 @@ func ParseOpParams(name string, v int, params string) (interface{}, error) {
 	switch name {
 	case "bilat":
 		return bilat(v, params)
+	case "bloom":
+		return bloom(v, params)
+	case "clahe":
+		return clahe(v, params)
+	case "colisa":
+		return colisa(v, params)
+	case "colorcontrast":
+		return colorcontrast(v, params)
+	case "colorcorrection":
+		return colorcorrection(v, params)
+	case "colorize":
+		return colorize(v, params)
+	case "demosaic":
+		return demosaic(v, params)
+	case "filmic":
+		return filmic(v, params)
+	case "filmicrgb":
+		return filmicrgb(v, params)
 	case "exposure":
 		return exposure(v, params)
 	case "vibrance":
