@@ -82,36 +82,16 @@ func ReadXMP(file string) (XMP, error) {
 
 	ops := make([]darktable.Op, len(d.Description.DTHistory))
 	for i, h := range d.Description.DTHistory {
-		mv, err := strconv.Atoi(h.ModVersion)
-		if err != nil {
-			return XMP{}, err
-		}
-		mp, err := strconv.Atoi(h.MultiPriority)
-		if err != nil {
-			return XMP{}, err
-		}
-		bv, err := strconv.Atoi(h.BlendOpVersion)
-		if err != nil {
-			return XMP{}, err
-		}
-		op := darktable.Op{
-			Name:           h.Operation,
-			Enabled:        h.Enabled == "1",
-			ModVersion:     mv,
-			RawParams:      h.Params,
-			MultiName:      h.MultiName,
-			MultiPriority:  mp,
-			BlendOpVersion: bv,
-			BlendOpParams:  h.BlendOpParams,
-			Number:         h.Num,
-			IOPOrder:       h.IOPOrder,
-		}
-		if prm, err := darktable.ParseOpParams(op.Name, op.ModVersion, op.RawParams); err != nil {
-			// @todo: log a low priority error, but don't block up XMP parsing for it
-		} else {
-			op.Params = prm
-		}
-		ops[i] = op
+		ops[i] = darktable.ParseHistory(h.Num,
+			h.Operation,
+			h.Enabled,
+			h.ModVersion,
+			h.Params,
+			h.MultiName,
+			h.MultiPriority,
+			h.IOPOrder,
+			h.BlendOpVersion,
+			h.BlendOpParams)
 	}
 
 	var l *Location
