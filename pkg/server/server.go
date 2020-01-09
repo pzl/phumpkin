@@ -52,7 +52,6 @@ func New(options ...OptFunc) *server {
 }
 
 func (s *server) Start(ctx context.Context) (err error) {
-	s.routes()
 
 	c := context.WithValue(ctx, "log", s.Log)
 	c = context.WithValue(c, "photoDir", s.photoDir)
@@ -65,6 +64,9 @@ func (s *server) Start(ctx context.Context) (err error) {
 	}
 	s.db = db
 	c = context.WithValue(c, "badger", db)
+
+	// set server db before setting up routes, where ctx middleware will pick it up
+	s.routes()
 
 	if err := s.mgr.Start(c); err != nil {
 		return err

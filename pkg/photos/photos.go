@@ -43,8 +43,6 @@ type DTOperation struct {
 }
 
 type Mgr struct {
-	log     logrus.FieldLogger
-	db      *badger.DB
 	indexer Indexer
 }
 
@@ -53,13 +51,11 @@ func New() *Mgr {
 }
 
 func (m *Mgr) Start(ctx context.Context) error {
-	m.log = ctx.Value("log").(logrus.FieldLogger)
 	photoDir := ctx.Value("photoDir").(string)
 	m.indexer.photoDir = photoDir
-	m.indexer.log = m.log
+	m.indexer.log = ctx.Value("log").(logrus.FieldLogger)
 
-	m.db = ctx.Value("badger").(*badger.DB)
-	m.indexer.db = m.db
+	m.indexer.db = ctx.Value("badger").(*badger.DB)
 	if err := m.indexer.StartWatcher(ctx); err != nil {
 		return err
 	}
