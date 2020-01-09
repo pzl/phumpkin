@@ -10,6 +10,26 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
+// returns the modification time for an EXIF or XMP entry
+func ReadModTime(db *badger.DB, key string, file string) (time.Time, error) {
+	if file[0:1] == "/" {
+		return time.Time{}, fmt.Errorf("photoDir-relative path expected. Got %s in ReadModTime", file)
+	}
+	t := time.Time{}
+	err := db.View(func(tx *badger.Txn) error {
+		tm, err := getAsTime(tx, []byte(file+"."+key+".time"))
+		if err != nil {
+			return err
+		}
+		t = tm
+		return nil
+	})
+	if err != nil {
+		return time.Time{}, err
+	}
+	return t, nil
+}
+
 // fetches a key that's expected to be a time.time
 func getAsTime(tx *badger.Txn, key []byte) (time.Time, error) {
 	t, err := tx.Get(key)
