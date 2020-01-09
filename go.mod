@@ -7,12 +7,16 @@ require (
 	github.com/dgraph-io/badger v1.6.0
 	github.com/fsnotify/fsnotify v1.4.7
 	github.com/go-chi/chi v4.0.2+incompatible
+	github.com/knadh/koanf v0.6.0 // indirect
+	github.com/konsorten/go-windows-terminal-sequences v1.0.2 // indirect
+	github.com/pelletier/go-toml v1.6.0 // indirect
 	github.com/pkg/errors v0.8.1
-	github.com/pzl/mstk v0.0.0-20190908180923-0e4983063dd8
+	github.com/pzl/mstk v0.0.0-20200107022131-6ad83d2e8eb8
 	github.com/saracen/walker v0.0.0-20191201085201-324a081bae7e
 	github.com/shurcooL/httpfs v0.0.0-20190707220628-8d4bc4ba7749 // indirect
 	github.com/shurcooL/vfsgen v0.0.0-20181202132449-6a9ea43bcacd // indirect
 	github.com/sirupsen/logrus v1.4.2
-	github.com/spf13/pflag v1.0.3
+	github.com/spf13/pflag v1.0.5
+	golang.org/x/sys v0.0.0-20200106162015-b016eb3dc98e // indirect
 	nhooyr.io/websocket v1.7.4
 )

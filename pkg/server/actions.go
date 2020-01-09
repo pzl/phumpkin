@@ -5,13 +5,11 @@ import (
 	"encoding/base64"
 	"errors"
 	"io/ioutil"
-	"net/http"
 	"os"
 	"path"
 	"path/filepath"
 	"sort"
 	"strings"
-	"time"
 
 	"github.com/pzl/mstk/logger"
 	"github.com/pzl/phumpkin/pkg/darktable"
@@ -24,35 +22,6 @@ type Action struct {
 	s *server
 }
 
-type Resource struct {
-	URL    string `json:"url"`
-	Width  int    `json:"width"`
-	Height int    `json:"height"`
-}
-type FileInfo struct {
-	Name     string              `json:"name"`
-	Size     int64               `json:"size"`
-	Dir      bool                `json:"-"`
-	Rotation int                 `json:"rotation"`
-	Meta     *photos.Meta        `json:"meta"`
-	Thumbs   map[string]Resource `json:"thumbs"`
-	Original Resource            `json:"original"`
-}
-
-type Request struct {
-	Ctx  context.Context
-	Log  logrus.FieldLogger
-	Host string
-}
-
-func FromRequest(r *http.Request) Request {
-	return Request{
-		Ctx:  r.Context(),
-		Log:  logger.GetLog(r),
-		Host: r.Host,
-	}
-}
-
 type ListReq struct {
 	Offset int
 	Count  int
@@ -63,32 +32,40 @@ type ListReq struct {
 
 // @todo: duplicates by XMP
 // primary may be <IMG>.ARW.xmp and dupe may be <IMG>_nn.ARW.XMP
-func (a Action) List(r Request, lr ListReq) ([]FileInfo, []string, error) {
-	files := make([]FileInfo, 0, 300)
+func (a Action) List(ctx context.Context, lr ListReq) ([]photos.Photo, []string, error) {
+	log := logger.LogFromCtx(ctx)
+	photoDir := ctx.Value("photoDir").(string)
+
+	// receiving channels
+	rcvPhoto := make(chan photos.Photo)
+	rcvDir := make(chan string)
+	done := make(chan struct{}) // collector sync channel
+
+	// collectors for sorting and responding with
+	files := make([]photos.Photo, 0, 300)
 	dirs := make([]string, 0, 20)
-	found := make(chan FileInfo)
-	done := make(chan struct{})
 
 	go func() {
-		for f := range found {
-			if f.Dir {
-				dirs = append(dirs, f.Name)
-				r.Log.WithField("name", f.Name).Trace("received dir")
-				continue
-			}
-			r.Log.WithField("name", f.Name).Trace("received file")
-			files = append(files, f)
+		for d := range rcvDir {
+			dirs = append(dirs, d)
 		}
 		done <- struct{}{}
 	}()
 
-	searchPath := a.s.photoDir
+	go func() {
+		for p := range rcvPhoto {
+			files = append(files, p)
+		}
+		done <- struct{}{}
+	}()
+
+	searchPath := photoDir
 	if lr.Path != "" {
 		searchPath = filepath.Join(searchPath, path.Clean(lr.Path))
 	}
-	r.Log.WithField("searchPath", searchPath).Debug("scanning for photos")
-	err := walker.WalkWithContext(r.Ctx, searchPath, func(name string, fi os.FileInfo) error {
-		r.Log.WithField("filename", name).Trace("looping over file")
+	log.WithField("searchPath", searchPath).Debug("scanning for photos")
+	err := walker.WalkWithContext(ctx, searchPath, func(name string, fi os.FileInfo) error {
+		log.WithField("filename", name).Trace("looping over file")
 
 		if name == searchPath {
 			return nil
@@ -96,107 +73,32 @@ func (a Action) List(r Request, lr ListReq) ([]FileInfo, []string, error) {
 		if strings.HasSuffix(name, ".xmp") {
 			return nil
 		}
-		relpath := strings.TrimPrefix(name, a.s.photoDir+"/")
 		if fi.IsDir() {
-			found <- FileInfo{
-				Name: strings.TrimPrefix(name, searchPath+"/"),
-				Dir:  true,
-			}
+			rcvDir <- strings.TrimPrefix(name, searchPath+"/")
 			return filepath.SkipDir // non-recursive for now
 		}
 
-		meta, err := a.s.mgr.Load(r.Log, relpath)
+		photo, err := photos.FromSrc(ctx, name)
 		if err != nil {
 			return err
 		}
-
-		// @todo: this doesn't account for darktable crops
-		fw, ok := meta.EXIF["ImageWidth"].(float64)
-		if !ok {
-			fw = 8000
-		}
-		fh, ok := meta.EXIF["ImageHeight"].(float64)
-		if !ok {
-			fh = 5320
-		}
-		w := int(fw)
-		h := int(fh)
-
-		// switch width and height if rotated
-		rotStrings := map[string]int{
-			"Horizontal (normal)":                 0,
-			"Mirror vertical":                     1,
-			"Mirror horizontal":                   2,
-			"Rotate 180":                          3,
-			"Mirror horizontal and rotate 270 CW": 4,
-			"Rotate 90 CW":                        5,
-			"Rotate 270 CW":                       6,
-			"Mirror horizontal and rotate 90 CW":  7,
-		}
-
-		rotation := 0
-		if v, ok := meta.EXIF["Orientation"]; ok {
-			if s, ok := v.(string); ok {
-				if rot, ok := rotStrings[s]; ok {
-					rotation = rot
-					if rot > 3 {
-						w, h = h, w
-					}
-				}
-			}
-		}
-
-		thumbs := make(map[string]Resource)
-		for _, s := range Sizes {
-			var rw int
-			var rh int
-
-			if w > h {
-				rw = s.Max
-				rh = int(float64(h) / (float64(w) / float64(rw)))
-			} else {
-				rh = s.Max
-				rw = int(float64(w) / (float64(h) / float64(rh)))
-			}
-
-			if s.Name == "full" {
-				rw = w
-				rh = h
-			}
-
-			thumbs[s.Name] = Resource{
-				URL:    "http://" + r.Host + "/api/v1/thumb/" + s.Name + "/" + thumbExt(relpath),
-				Width:  rw,
-				Height: rh,
-			}
-		}
-
-		found <- FileInfo{
-			Name:     relpath,
-			Dir:      false,
-			Size:     fi.Size(),
-			Rotation: rotation,
-			Meta:     &meta,
-			Original: Resource{
-				URL:    "http://" + r.Host + "/api/v1/photos/" + relpath,
-				Width:  w,
-				Height: h,
-			},
-			Thumbs: thumbs,
-		}
+		rcvPhoto <- photo
 
 		return nil
 	}, walker.WithErrorCallback(func(name string, err error) error {
-		r.Log.WithError(err).Error("encountered err when walking files")
+		log.WithError(err).Error("encountered err when walking files")
 		return nil
 	}))
-	close(found)
+	// done sending, exit these loops, they will send to done when finished appending
+	close(rcvDir)
+	close(rcvPhoto)
 
 	if err != nil {
 		return nil, nil, err
 	}
 
-	<-done
+	<-done // wait for dirs loop
+	<-done // wait for photos loop
 
 	if lr.Sort != "" {
 		sort.SliceStable(files, func(i, j int) bool {
@@ -204,29 +106,27 @@ func (a Action) List(r Request, lr ListReq) ([]FileInfo, []string, error) {
 			switch strings.ToLower(lr.Sort) {
 			case "name":
 				if lr.Asc {
-					return files[i].Name < files[j].Name
+					return files[i].Relpath() < files[j].Relpath()
 				} else {
-					return files[i].Name > files[j].Name
+					return files[i].Relpath() > files[j].Relpath()
 				}
 			case "date taken":
-				if a, aok := files[i].Meta.EXIF["DateTimeOriginal"]; aok {
-					if b, bok := files[j].Meta.EXIF["DateTimeOriginal"]; bok {
-						if as, ok := a.(string); ok {
-							if bs, ok := b.(string); ok {
-								if lr.Asc {
-									return as < bs
-								} else {
-									return as > bs
-								}
-							}
+				srt := false
+				files[i].Ex_if_string("DateTimeOriginal", func(a string) {
+					files[j].Ex_if_string("DateTimeOriginal", func(b string) {
+						if lr.Asc {
+							srt = a < b
+						} else {
+							srt = a > b
 						}
-					}
-				}
+					})
+				})
+				return srt
 			case "rating":
 				if lr.Asc {
-					return files[i].Meta.Rating < files[j].Meta.Rating
+					return files[i].MetaInt("Rating") < files[j].MetaInt("Rating")
 				} else {
-					return files[i].Meta.Rating > files[j].Meta.Rating
+					return files[i].MetaInt("Rating") > files[j].MetaInt("Rating")
 				}
 			}
 
@@ -246,37 +146,33 @@ func (a Action) List(r Request, lr ListReq) ([]FileInfo, []string, error) {
 
 type SizeReq struct {
 	File    string
-	Size    string
+	Size    photos.Size
 	B64     bool
 	Purpose string
 }
 
-func (a Action) GetSize(r Request, sr SizeReq) (string, error) {
-	filepath := a.s.photoDir + "/" + sr.File
-	thumbpath := a.s.thumbDir + "/" + sr.Size + "/" + thumbExt(sr.File)
+func (a Action) GetSize(ctx context.Context, sr SizeReq) (string, error) {
+	log := logger.LogFromCtx(ctx)
+	photoDir := ctx.Value("photoDir").(string)
+	thumbDir := ctx.Value("thumbDir").(string)
 
-	r.Log.WithFields(logrus.Fields{
+	filepath := photoDir + "/" + sr.File
+	thumbpath := thumbDir + "/" + sr.Size.String() + "/" + thumbExt(sr.File)
+
+	log.WithFields(logrus.Fields{
 		"size": sr.Size,
 		"file": sr.File,
 	}).Debug("size request")
-	l := r.Log.WithField("file", sr.File)
+	l := log.WithField("file", sr.File)
 
 	// check modification times of source image and XMPs
-	var xmp string
-	lastMod := time.Unix(0, 0)
-	srcinfo, err := os.Stat(filepath)
+	p, err := photos.FromSrc(ctx, filepath)
 	if err != nil {
-		return "", nil
+		return "", err
 	}
-	if srcinfo.ModTime().After(lastMod) {
-		lastMod = srcinfo.ModTime()
-	}
-	if fi, err := os.Stat(filepath + ".xmp"); err == nil {
-		xmp = filepath + ".xmp"
-		if fi.ModTime().After(lastMod) {
-			lastMod = fi.ModTime()
-		}
-	}
+
+	var xmp string
+	lastMod := p.LastMod()
 	l.WithField("mod", lastMod).Trace("last modification time of original source")
 
 	// if thumb doesn't already exist (or original has changed), generate on the fly
@@ -285,33 +181,28 @@ func (a Action) GetSize(r Request, sr SizeReq) (string, error) {
 		l.Debug("generating thumb on the fly")
 		src := filepath
 
-		// if there is a larger thumb that is still up-to-date, generate from that.
+		// if there is a larger size thumbnail that is still up-to-date, generate from that.
 		// it's quicker than using a huge ARW
-
-		for _, s := range Sizes {
-			if sr.Size == "full" { // no larger thumb
-				continue
-			}
-			if s.Name == sr.Size { // skip yourself
-				continue
-			}
-			if s.Max < Px(sr.Size) && s.Max != 0 {
-				continue // thumb is smaller, except 'full' size
-			}
-			bigthumb := a.s.thumbDir + "/" + s.Name + "/" + thumbExt(sr.File)
-			if ti, err := os.Stat(bigthumb); err == nil {
-				if ti.ModTime().After(srcinfo.ModTime()) {
-					src = bigthumb
-					break
+		if sr.Size < photos.SizeFull { // "full" will not have anything larger
+			for _, s := range []photos.Size{photos.SizeXS, photos.SizeSmall, photos.SizeMedium, photos.SizeLarge, photos.SizeXL, photos.SizeFull} {
+				if sr.Size >= s { // skip anything smaller than request
+					continue
+				}
+				bigthumb := thumbDir + "/" + s.String() + "/" + thumbExt(sr.File)
+				if ti, err := os.Stat(bigthumb); err == nil {
+					if ti.ModTime().After(lastMod) {
+						src = bigthumb
+						break
+					}
 				}
 			}
 		}
 
-		if sr.Size == "x-small" || src != filepath {
+		if sr.Size == photos.SizeXS || src != filepath {
 			// quick trickery using vips
 
 			l.Trace("resizing with vips")
-			if err := photos.Resize(src, thumbpath, Px(sr.Size)); err != nil {
+			if err := photos.Resize(src, thumbpath, sr.Size.Int()); err != nil {
 				l.WithField("src", src).WithField("dest", thumbpath).WithError(err).Error("error resizing with vips")
 				return "", err
 			}
@@ -325,7 +216,7 @@ func (a Action) GetSize(r Request, sr SizeReq) (string, error) {
 				opts = append(opts, darktable.SetXMP(xmp))
 			}
 
-			job := a.s.darktable.CreateJob(src, thumbpath, Px(sr.Size), opts...)
+			job := a.s.darktable.CreateJob(src, thumbpath, sr.Size.Int(), opts...)
 			priority := darktable.PR_NORMAL
 			switch sr.Purpose {
 			case "lazysrc":
@@ -337,7 +228,7 @@ func (a Action) GetSize(r Request, sr SizeReq) (string, error) {
 			select {
 			case <-job.Done:
 				l.Trace("thumb generation job complete")
-			case <-r.Ctx.Done():
+			case <-ctx.Done():
 				l.Trace("HTTP client disconnected, stopping immediate thumb request")
 				job.Cancel()
 				return "", errors.New("canceled")
@@ -351,7 +242,7 @@ func (a Action) GetSize(r Request, sr SizeReq) (string, error) {
 	l.Debug("sending thumb file")
 
 	if !sr.B64 {
-		return "http://" + r.Host + "/api/v1/thumb/" + sr.Size + "/" + thumbExt(sr.File), nil
+		return "http://" + gethost(ctx) + "/api/v1/thumb/" + sr.Size.String() + "/" + thumbExt(sr.File), nil
 	}
 
 	// read into b64

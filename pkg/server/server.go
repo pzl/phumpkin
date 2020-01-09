@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"path/filepath"
 
+	"github.com/dgraph-io/badger"
 	"github.com/go-chi/chi"
 	"github.com/pzl/mstk"
 	"github.com/pzl/mstk/logger"
@@ -22,6 +23,7 @@ type server struct {
 	thumbDir     string
 	photoDir     string
 	dataDir      string
+	db           *badger.DB
 	assets       http.Handler
 	router       *chi.Mux
 	PhotoHandler PhotoHandler
@@ -36,6 +38,7 @@ func New(options ...OptFunc) *server {
 		Server:    mstk.NewServer(),
 		router:    chi.NewRouter(),
 		darktable: d,
+		mgr:       photos.New(),
 	}
 	s.PhotoHandler.s = s
 	s.actions.s = s
@@ -45,17 +48,36 @@ func New(options ...OptFunc) *server {
 			o(s)
 		}
 	}
-
-	s.mgr = photos.New(s.Log, s.dataDir, s.photoDir)
-	d.Log = s.Log
 	return s
 }
 
 func (s *server) Start(ctx context.Context) (err error) {
+
+	c := context.WithValue(ctx, "log", s.Log)
+	c = context.WithValue(c, "photoDir", s.photoDir)
+	c = context.WithValue(c, "dataDir", s.dataDir)
+	c = context.WithValue(c, "thumbDir", s.thumbDir)
+
+	db, err := badger.Open(badger.DefaultOptions(s.dataDir))
+	if err != nil {
+		return err
+	}
+	s.db = db
+	c = context.WithValue(c, "badger", db)
+
+	// set server db before setting up routes, where ctx middleware will pick it up
 	s.routes()
-	s.mgr.Start(ctx)
-	s.darktable.Start(ctx)
-	return s.Server.Start(ctx)
+
+	if err := s.mgr.Start(c); err != nil {
+		return err
+	}
+	s.darktable.Start(c)
+	return s.Server.Start(c)
+}
+
+func (s *server) Shutdown(ctx context.Context) {
+	s.db.Close()
+	s.Server.Shutdown(ctx)
 }
 
 func Addr(addr string) OptFunc      { return func(s *server) { mstk.Addr(addr)(s.Server) } }

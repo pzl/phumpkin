@@ -1,6 +1,7 @@
 package server
 
 import (
+	"context"
 	"encoding/json"
 	"net/http"
 	"os"
@@ -10,6 +11,7 @@ import (
 
 	"github.com/go-chi/chi"
 	"github.com/pzl/mstk/logger"
+	"github.com/pzl/phumpkin/pkg/photos"
 	"nhooyr.io/websocket"
 	"nhooyr.io/websocket/wsjson"
 )
@@ -36,7 +38,7 @@ func (ph *PhotoHandler) List(w http.ResponseWriter, r *http.Request) {
 	if asc := r.URL.Query().Get("sort_dir"); asc == "desc" {
 		ascending = false
 	}
-	photos, dirs, err := ph.s.actions.List(FromRequest(r), ListReq{
+	ps, dirs, err := ph.s.actions.List(r.Context(), ListReq{
 		Offset: offset,
 		Count:  count,
 		Asc:    ascending,
@@ -48,15 +50,16 @@ func (ph *PhotoHandler) List(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	writeJSON(w, r, struct {
-		Photos []FileInfo `json:"photos"`
-		Dirs   []string   `json:"dirs"`
-	}{photos, dirs})
+		Photos []photos.Photo `json:"photos"`
+		Dirs   []string       `json:"dirs"`
+	}{ps, dirs})
 }
 
 func (ph *PhotoHandler) Get(w http.ResponseWriter, r *http.Request) {
 	log := logger.GetLog(r)
 	path := chi.URLParam(r, "*")
-	srcpath := ph.s.photoDir + "/" + path
+	photoDir := r.Context().Value("photoDir").(string)
+	srcpath := photoDir + "/" + path
 	l := log.WithField("file", srcpath)
 	l.Debug("source file requested")
 
@@ -68,12 +71,14 @@ func (ph *PhotoHandler) Get(w http.ResponseWriter, r *http.Request) {
 }
 func (ph *PhotoHandler) GetThumb(w http.ResponseWriter, r *http.Request) {
 	log := logger.GetLog(r)
+	photoDir := r.Context().Value("photoDir").(string)
+	thumbDir := r.Context().Value("thumbDir").(string)
 
-	size := chi.URLParam(r, "size")
+	size := photos.ParseSize(chi.URLParam(r, "size"))
 	path := chi.URLParam(r, "*")
 
 	// look for original file
-	search := ph.s.photoDir + "/" + strings.Replace(path, ".jpg", ".*", -1)
+	search := photoDir + "/" + strings.Replace(path, ".jpg", ".*", -1)
 	matches, err := filepath.Glob(search)
 	log.WithField("search", search).Debug("searching for original file")
 	if err != nil {
@@ -90,19 +95,19 @@ func (ph *PhotoHandler) GetThumb(w http.ResponseWriter, r *http.Request) {
 		log.WithField("matches", matches).Warnf("found %d source matches!", len(matches))
 	}
 	s := SizeReq{
-		File:    strings.TrimPrefix(matches[0], ph.s.photoDir+"/"),
+		File:    strings.TrimPrefix(matches[0], photoDir+"/"),
 		Size:    size,
 		B64:     false,
 		Purpose: r.URL.Query().Get("purpose"),
 	}
 
-	if _, err := ph.s.actions.GetSize(FromRequest(r), s); err != nil {
+	if _, err := ph.s.actions.GetSize(r.Context(), s); err != nil {
 		log.WithError(err).Error("error getting image at size")
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
-	fp := ph.s.thumbDir + "/" + size + "/" + path
+	fp := thumbDir + "/" + size.String() + "/" + path
 	log.WithField("file", fp).Debug("sending thumb file")
 	http.ServeFile(w, r, fp)
 }
@@ -121,6 +126,7 @@ type SockResponse struct {
 
 func (ph *PhotoHandler) Websocket(w http.ResponseWriter, r *http.Request) {
 	log := logger.GetLog(r)
+	photoDir := r.Context().Value("photoDir").(string)
 	c, err := websocket.Accept(w, r, &websocket.AcceptOptions{
 		InsecureSkipVerify: true, // @todo: turn off after dev done
 	})
@@ -213,7 +219,7 @@ func (ph *PhotoHandler) Websocket(w http.ResponseWriter, r *http.Request) {
 					break
 				}
 			}
-			photos, dirs, err := ph.s.actions.List(FromRequest(r), ListReq{
+			photos, dirs, err := ph.s.actions.List(r.Context(), ListReq{
 				Offset: offset,
 				Count:  count,
 				Asc:    ascending,
@@ -251,7 +257,7 @@ func (ph *PhotoHandler) Websocket(w http.ResponseWriter, r *http.Request) {
 					resp.Error = "size expected to be a string"
 					break
 				} else {
-					sr.Size = ss
+					sr.Size = photos.ParseSize(ss)
 				}
 			}
 			if b64, ok := req.Params["b64"]; ok {
@@ -275,7 +281,7 @@ func (ph *PhotoHandler) Websocket(w http.ResponseWriter, r *http.Request) {
 				sr.Purpose = ps
 			}
 
-			data, err := ph.s.actions.GetSize(FromRequest(r), sr)
+			data, err := ph.s.actions.GetSize(r.Context(), sr)
 			if err != nil {
 				resp.Error = err.Error()
 				break
@@ -292,13 +298,27 @@ func (ph *PhotoHandler) Websocket(w http.ResponseWriter, r *http.Request) {
 				resp.Error = "file expected to be a string"
 				break
 			}
-			meta, err := ph.s.mgr.Load(log, ph.s.photoDir+"/"+file)
+			p, err := photos.FromSrc(r.Context(), photoDir+"/"+file)
 			if err != nil {
 				log.WithError(err).Error("failed to get meta info")
 				resp.Error = "failed to get meta info"
-			} else {
-				resp.Data = meta
+				break
 			}
+			x, err := p.XMP()
+			if err != nil {
+				resp.Error = "failed to load meta info"
+				break
+			}
+			ex, err := p.Exif()
+			if err != nil {
+				resp.Error = "failed to load exif info"
+				break
+			}
+			resp.Data = map[string]interface{}{
+				"xmp":  x,
+				"exif": ex,
+			}
+
 		case "":
 			resp.Error = "missing action"
 		default:
@@ -308,33 +328,9 @@ func (ph *PhotoHandler) Websocket(w http.ResponseWriter, r *http.Request) {
 	}
 
 	c.Close(websocket.StatusNormalClosure, "k im done with you")
-
 }
 
 // ------------ helpers / internal funcs
-
-type Size struct {
-	Name string
-	Max  int
-}
-
-var Sizes = []Size{
-	{"x-small", 10},
-	{"small", 200},
-	{"medium", 800},
-	{"large", 1200},
-	{"x-large", 2000},
-	{"full", 0},
-}
-
-func Px(s string) int {
-	for _, n := range Sizes {
-		if s == n.Name {
-			return n.Max
-		}
-	}
-	return 800
-}
 
 func thumbExt(filename string) string {
 	r := strings.NewReplacer(
@@ -344,3 +340,5 @@ func thumbExt(filename string) string {
 	)
 	return r.Replace(filename)
 }
+
+func gethost(ctx context.Context) string { return ctx.Value("host").(string) }
