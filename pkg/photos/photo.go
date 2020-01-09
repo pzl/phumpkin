@@ -69,6 +69,29 @@ func (s Size) Int() int {
 // https://stackoverflow.com/questions/52161555/how-to-custom-marshal-map-keys-in-json
 func (s Size) MarshalText() ([]byte, error) { return []byte(s.String()), nil }
 
+/*
+	data to track:
+		- source file (jpg, raw)
+		- XMP existence
+		- XMP data
+		- If a duplicate exists
+		- EXIF data
+
+	actions:
+		- resize
+			+ via darktable or vips
+			+ deciding algorithm should live here
+		- change ratings
+		- change tags
+
+
+
+	general actions that relate to photos:
+		- listing photos (by dir, or other)
+		- filtering, sorting
+
+*/
+
 type Photo struct {
 	Src string
 
