@@ -11,6 +11,8 @@ import (
 	"os/exec"
 	"strconv"
 	"strings"
+
+	"github.com/pzl/phumpkin/pkg/darktable"
 )
 
 // ---------------- XMP parsing -----------
@@ -78,7 +80,7 @@ func ReadXMP(file string) (XMP, error) {
 		return XMP{}, err
 	}
 
-	ops := make([]DTOperation, len(d.Description.DTHistory))
+	ops := make([]darktable.Op, len(d.Description.DTHistory))
 	for i, h := range d.Description.DTHistory {
 		mv, err := strconv.Atoi(h.ModVersion)
 		if err != nil {
@@ -92,11 +94,11 @@ func ReadXMP(file string) (XMP, error) {
 		if err != nil {
 			return XMP{}, err
 		}
-		ops[i] = DTOperation{
+		op := darktable.Op{
 			Name:           h.Operation,
 			Enabled:        h.Enabled == "1",
 			ModVersion:     mv,
-			Params:         h.Params,
+			RawParams:      h.Params,
 			MultiName:      h.MultiName,
 			MultiPriority:  mp,
 			BlendOpVersion: bv,
@@ -104,6 +106,12 @@ func ReadXMP(file string) (XMP, error) {
 			Number:         h.Num,
 			IOPOrder:       h.IOPOrder,
 		}
+		if prm, err := darktable.ParseOpParams(op.Name, op.ModVersion, op.RawParams); err != nil {
+			// @todo: log a low priority error, but don't block up XMP parsing for it
+		} else {
+			op.Params = prm
+		}
+		ops[i] = op
 	}
 
 	var l *Location
