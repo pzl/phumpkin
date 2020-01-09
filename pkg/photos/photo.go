@@ -285,6 +285,31 @@ func (p *Photo) Meta(field string) (interface{}, error) {
 		return nil, err
 	}
 
+	if field == "Location" {
+		// special handling to remake the struct expected
+
+		lat, has := ex["GPSLatitude"]
+		if !has {
+			return nil, nil
+		}
+		lon, has := ex["GPSLongitude"]
+		if !has {
+			return nil, nil
+		}
+
+		var alt string
+		a, has := ex["GPSAltitude"]
+		if has {
+			alt = a.(string)
+		}
+
+		return Location{
+			Lat:      lat.(string),
+			Lon:      lon.(string),
+			Altitude: alt,
+		}, nil
+	}
+
 	v, has := ex[field]
 	if !has {
 		// @todo: key not found? is that an error?
