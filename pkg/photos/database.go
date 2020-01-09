@@ -9,19 +9,20 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-func getModTime(tx *badger.Txn, key []byte) (*time.Time, error) {
+// fetches a key that's expected to be a time.time
+func getAsTime(tx *badger.Txn, key []byte) (time.Time, error) {
 	t, err := tx.Get(key)
 	if err != nil {
-		return nil, err
+		return time.Time{}, err
 	}
 
-	tm := &time.Time{}
+	tm := time.Time{}
 	v, err := t.ValueCopy(nil)
 	if err != nil {
-		return nil, err
+		return time.Time{}, err
 	}
 	if err := tm.UnmarshalBinary(v); err != nil {
-		return nil, err
+		return time.Time{}, err
 	}
 
 	return tm, nil

@@ -161,11 +161,11 @@ func (idx *Indexer) needsIndex(file string) (bool, bool, error) {
 		// process XMP
 		if xmp.exists {
 			// get and check db write time against file mod time
-			if t, err := getModTime(tx, []byte(file+".XMP.time")); err != nil {
+			if t, err := getAsTime(tx, []byte(file+".XMP.time")); err != nil {
 				l.WithError(err).Trace("cannot read db XMP.time write time. Will read XMP from file")
 				xmp.needIndex = true
 			} else {
-				xmp.dbMod = *t
+				xmp.dbMod = t
 				l.WithField("file mod", xmp.sourceMod).WithField("db mod", xmp.dbMod).Trace("comparing modification times of XMP")
 				if xmp.sourceMod.After(xmp.dbMod) {
 					l.Trace("XMP source file modified. Will read from file")
@@ -174,11 +174,11 @@ func (idx *Indexer) needsIndex(file string) (bool, bool, error) {
 			}
 		}
 
-		if t, err := getModTime(tx, []byte(file+".EXIF.time")); err != nil {
+		if t, err := getAsTime(tx, []byte(file+".EXIF.time")); err != nil {
 			l.WithError(err).Trace("error reading exif mod time from db. Will read exif from file")
 			exif.needIndex = true
 		} else {
-			exif.dbMod = *t
+			exif.dbMod = t
 			l.WithField("file mod", exif.sourceMod).WithField("db mod", exif.dbMod).Trace("comparing modification times of EXIF data")
 			if exif.sourceMod.After(exif.dbMod) {
 				l.Trace("EXIF file modified. Will read from file")
