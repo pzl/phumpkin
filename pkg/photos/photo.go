@@ -610,6 +610,7 @@ func (p Photo) MarshalJSON() ([]byte, error) {
 		Orientation int                    `json:"orientation"`
 		XMP         XMP                    `json:"xmp"`
 		Exif        map[string]interface{} `json:"exif"`
+		Meta        map[string]interface{} `json:"meta"` // xmp/exif merge
 		Thumbs      map[Size]Resource      `json:"thumbs"`
 		Original    Resource               `json:"original"`
 	}
@@ -629,6 +630,14 @@ func (p Photo) MarshalJSON() ([]byte, error) {
 		return nil, err
 	}
 
+	meta := make(map[string]interface{})
+	if l, err := p.Meta("Location"); err == nil && l != nil {
+		meta["loc"] = l
+	}
+	meta["rating"] = p.MetaInt("Rating")
+	meta["rights"] = p.MetaString("Rights")
+	meta["creator"] = p.MetaString("Creator")
+
 	w, h := p.Size()
 	host := p.ctx.Value("host").(string)
 	relpath := p.Relpath()
@@ -637,6 +646,7 @@ func (p Photo) MarshalJSON() ([]byte, error) {
 		Size:        fs,
 		XMP:         xmp,
 		Exif:        exif,
+		Meta:        meta,
 		Rotation:    p.Rotation().String(),
 		Orientation: int(p.Orientation()),
 		Thumbs:      p.ThumbSizes(),

@@ -52,11 +52,11 @@
 						<rating :value="display_rating" @input="rate({ image: index, rating: $event })" />
 					</v-row>
 					<div class="d-flex align-center">
-						<v-tooltip bottom v-if="loc">
+						<v-tooltip bottom v-if="meta.loc">
 							<template v-slot:activator="{ on }">
-								<v-icon dark x-small v-if="loc" v-on="on">mdi-map-marker</v-icon>
+								<v-icon dark x-small v-if="meta.loc" v-on="on">mdi-map-marker</v-icon>
 							</template>
-							{{ loc.lat }}, {{ loc.lon }}
+							{{ meta.loc.lat }}, {{ meta.loc.lon }}
 						</v-tooltip>
 						<tags :dark="true" :tags="tags" />
 						<v-spacer />
@@ -88,7 +88,8 @@ export default {
 		rotation: {}, // 0-7 int
 		tags: {}, // array of strings
 		xmp: {}, //
-		loc: {}, // null or {lat:'', lon:''}
+		meta: {},
+		exif: {},
 		thumbs: {}, // full: { url: "...", width: n, height: n}
 		original: {}, //{ url: "...", width: n, height: n}
 	},
@@ -107,7 +108,7 @@ export default {
 			return this.selected.includes(this.index)
 		},
 		display_rating() {
-			return this.hover_reject ? 0 : this.xmp.rating
+			return this.hover_reject ? 0 : this.meta.rating
 		},
 		src() {
 			if (this.srcOverride) {

@@ -1,7 +1,7 @@
 <template>
 	<v-card outlined  class="ma-2 mb-5 summary-card" :max-height="600">
 		<v-card-title>{{name}} <sup><v-icon small v-if="exif.Make" :title="exif.Model">mdi-{{ camera_icon }}</v-icon></sup></v-card-title>
-		<v-card-subtitle><rating :readonly="true" :value="xmp.rating" /></v-card-subtitle>
+		<v-card-subtitle><rating :readonly="true" :value="meta.rating" /></v-card-subtitle>
 
 		<v-tabs grow v-model="tab" height="20px">
 			<v-tab style="min-width: 20px" class="pa-0" href="#basic"><v-icon small>mdi-calendar-blank</v-icon></v-tab>
@@ -17,7 +17,7 @@
 					<div>{{ sizeof }}</div>
 					<div>{{ original.width }}x{{ original.height }}</div>
 					<div v-if="taken">{{taken}}</div>
-					<div class="loc" v-if="xmp.loc"><v-icon small>mdi-map-marker</v-icon> {{ xmp.loc.lat }}, {{ xmp.loc.lon }}<span v-if="xmp.loc.alt">, {{ xmp.loc.alt }}</span></div>
+					<div class="loc" v-if="meta.loc"><v-icon small>mdi-map-marker</v-icon> {{ meta.loc.lat }}, {{ meta.loc.lon }}<span v-if="meta.loc.alt">, {{ meta.loc.alt }}</span></div>
 				</v-tab-item>
 				<v-tab-item value="shot-info">
 					<v-row no-gutters justify="space-between">
@@ -88,8 +88,8 @@
 					</v-expand-transition>
 				</v-tab-item>
 				<v-tab-item value="copy">
-					<div v-if="xmp.creator">Creator: {{ xmp.creator }}</div>
-					<div v-if="xmp.rights">Rights: {{ xmp.rights }}</div>
+					<div v-if="meta.creator">Creator: {{ meta.creator }}</div>
+					<div v-if="meta.rights">Rights: {{ meta.rights }}</div>
 				</v-tab-item>
 			</v-tabs-items>
 		</v-card-text>
@@ -106,7 +106,7 @@
 
 				<v-card :max-height="500">
 					<v-card-text class="text--primary xmp-popout">
-						<pre>{{ JSON.stringify({"xmp":xmp,"exif":exif}, null, 2) }}</pre>
+						<pre>{{ JSON.stringify({"meta":meta,"xmp":xmp,"exif":exif}, null, 2) }}</pre>
 					</v-card-text>
 				</v-card>
 			</v-menu>
@@ -125,8 +125,9 @@ export default {
 		name: {},
 		dir: {},
 		size: {}, // in bytes
-		xmp: {}, //
+		xmp: {},
 		exif: {},
+		meta: {}, // a few pre-merged XMP/EXIF fields
 		thumbs: {}, // full: { url: "...", width: n, height: n}
 		original: {}, //{ url: "...", width: n, height: n}
 	},
