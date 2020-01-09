@@ -1,6 +1,6 @@
 <template>
 	<v-card outlined  class="ma-2 mb-5 summary-card" :max-height="600">
-		<v-card-title>{{name}} <sup><v-icon small v-if="meta.exif.Make" :title="meta.exif.Model">mdi-{{ camera_icon }}</v-icon></sup></v-card-title>
+		<v-card-title>{{name}} <sup><v-icon small v-if="exif.Make" :title="exif.Model">mdi-{{ camera_icon }}</v-icon></sup></v-card-title>
 		<v-card-subtitle><rating :readonly="true" :value="meta.rating" /></v-card-subtitle>
 
 		<v-tabs grow v-model="tab" height="20px">
@@ -22,41 +22,41 @@
 				<v-tab-item value="shot-info">
 					<v-row no-gutters justify="space-between">
 						<v-col cols="1" v-if="metering">
-							<v-icon :title="'Metering: '+meta.exif.MeteringMode" small>{{ metering }}</v-icon>
+							<v-icon :title="'Metering: '+exif.MeteringMode" small>{{ metering }}</v-icon>
 						</v-col>
 						<v-col cols="1" v-if="focus_icon">
-							<v-icon :title="meta.exif.AFAreaMode" small>{{ focus_icon }}</v-icon>
+							<v-icon :title="exif.AFAreaMode" small>{{ focus_icon }}</v-icon>
 						</v-col>
 						<v-col cols="1" v-if="flash">
-							<v-icon :title="meta.exif.Flash" small>{{ flash }}</v-icon>
+							<v-icon :title="exif.Flash" small>{{ flash }}</v-icon>
 						</v-col>
-						<v-col cols="1" v-if="meta.exif.ImageStabilization">
-							<v-icon :title="'IS: '+meta.exif.ImageStabilization" small>mdi-vibrate{{ meta.exif.ImageStabilization.includes("On") ? '' : '-off' }}</v-icon>
+						<v-col cols="1" v-if="exif.ImageStabilization">
+							<v-icon :title="'IS: '+exif.ImageStabilization" small>mdi-vibrate{{ exif.ImageStabilization.includes("On") ? '' : '-off' }}</v-icon>
 						</v-col>
 						<v-col cols="1" v-if="temp">
 							<v-icon :title="temp+ ' | '+tempF" small>mdi-thermometer</v-icon>
 						</v-col>
-						<v-col cols="1" v-if="meta.exif.FacesDetected">
-							<v-icon :title="meta.exif.FacesDetected" small>mdi-face-recognition</v-icon>
+						<v-col cols="1" v-if="exif.FacesDetected">
+							<v-icon :title="exif.FacesDetected" small>mdi-face-recognition</v-icon>
 						</v-col>
-						<v-col cols="1"  v-if="meta.exif.SelfTimer && meta.exif.SelfTimer !== 'Off'">
-							<v-icon :title="meta.exif.SelfTimer" small>mdi-camera-timer</v-icon>
+						<v-col cols="1"  v-if="exif.SelfTimer && exif.SelfTimer !== 'Off'">
+							<v-icon :title="exif.SelfTimer" small>mdi-camera-timer</v-icon>
 						</v-col>
 						<v-col cols="1" v-if="batt">
-							<v-icon :title="meta.exif.BatteryLevel" small>{{ batt }}</v-icon>
+							<v-icon :title="exif.BatteryLevel" small>{{ batt }}</v-icon>
 						</v-col>
 					</v-row>
-					<div v-if="meta.exif">
+					<div v-if="exif">
 						<v-row dense justify="space-between">
-							<v-col cols="3">f / {{ meta.exif.Aperture }}</v-col>
+							<v-col cols="3">f / {{ exif.Aperture }}</v-col>
 							<v-col cols="auto">{{ exposure }}</v-col>
-							<v-col cols="auto">ISO: {{ meta.exif.ISO }}</v-col>
+							<v-col cols="auto">ISO: {{ exif.ISO }}</v-col>
 						</v-row>
-						<div>Focal Length: {{meta.exif.FocalLength}}</div>
-						<div>Focus Mode: {{meta.exif.FocusMode}}</div>
+						<div>Focal Length: {{exif.FocalLength}}</div>
+						<div>Focus Mode: {{exif.FocusMode}}</div>
 					</div>
 
-					<div v-if="meta.exif.LensID">{{meta.exif.LensID}}</div>
+					<div v-if="exif.LensID">{{exif.LensID}}</div>
 				</v-tab-item>
 				<v-tab-item value="tags">
 					<v-row v-if="colors" dense>
@@ -106,7 +106,7 @@
 
 				<v-card :max-height="500">
 					<v-card-text class="text--primary xmp-popout">
-						<pre>{{ JSON.stringify(meta, null, 2) }}</pre>
+						<pre>{{ JSON.stringify({"meta":meta,"exif":exif}, null, 2) }}</pre>
 					</v-card-text>
 				</v-card>
 			</v-menu>
@@ -126,6 +126,7 @@ export default {
 		dir: {},
 		size: {}, // in bytes
 		meta: {}, //
+		exif: {},
 		thumbs: {}, // full: { url: "...", width: n, height: n}
 		original: {}, //{ url: "...", width: n, height: n}
 	},
@@ -149,56 +150,56 @@ export default {
 			return b.toFixed(2)+" "+units[unit]
 		},
 		camera_icon() {
-			if (!this.meta || !this.meta.exif || !this.meta.exif.Make) {
+			if (!this.meta || !this.exif || !this.exif.Make) {
 				return ''
 			}
-			switch (this.meta.exif.Make) {
+			switch (this.exif.Make) {
 				case 'SONY': return 'alpha'
 				case 'Canon': return 'alpha-c'
 				case 'iPhone': return 'apple'
 			}
 		},
 		batt() {
-			if (!this.meta || !this.meta.exif || !this.meta.exif.BatteryLevel) {
+			if (!this.meta || !this.exif || !this.exif.BatteryLevel) {
 				return null
 			}
-			const lvl = parseInt(this.meta.exif.BatteryLevel.replace('%',''), 10)
+			const lvl = parseInt(this.exif.BatteryLevel.replace('%',''), 10)
 			return 'mdi-battery-'+Math.ceil(lvl / 10) * 10
 		},
 		metering() {
-			if (!this.meta || !this.meta.exif || !this.meta.exif.MeteringMode) {
+			if (!this.exif || !this.exif.MeteringMode) {
 				return null
 			}
-			switch (this.meta.exif.MeteringMode) {
+			switch (this.exif.MeteringMode) {
 				case 'Multi-segment': return 'mdi-camera-metering-matrix'
 			}
 			return null
 		},
 		flash() {
-			if (!this.meta || !this.meta.exif || !this.meta.exif.Flash) {
+			if (!this.exif || !this.exif.Flash) {
 				return null
 			}
-			if (this.meta.exif.Flash.startsWith("Off")) {
+			if (this.exif.Flash.startsWith("Off")) {
 				return 'mdi-flash-off'
 			}
 			return null
 		},
 		exposure() {
-			if (!this.meta || !this.meta.exif || !this.meta.exif.ExposureTime) {
+			if (!this.exif || !this.exif.ExposureTime) {
 				return null
 			}
-			if ( !(""+this.meta.exif.ExposureTime).includes('/') ) {
-				return this.meta.exif.ExposureTime + "s"
+			if ( !(""+this.exif.ExposureTime).includes('/') ) {
+				return this.exif.ExposureTime + "s"
 			}
-			return this.meta.exif.ExposureTime
+			return this.exif.ExposureTime
 		},
 		temp() {
-			if (!this.meta || !this.meta.exif) {
+			if (!this.exif) {
 				return null
 			}
-			return this.meta.exif.AmbientTemperature ||
-					this.meta.exif.CameraTemperature ||
-					this.meta.exif.BatteryTemperature ||
+			return this.exif.AmbientTemperature ||
+					this.exif.CameraTemperature ||
+					this.exif.BatteryTemperature ||
 					null
 		},
 		tempF() {
@@ -208,10 +209,10 @@ export default {
 			return Math.round(parseInt(this.temp.replace(/[^\d]+/g,'')) * 9/5 + 32) + "F"
 		},
 		focus_icon() {
-			if (!this.meta || !this.meta.exif || !this.meta.exif.AFAreaMode) {
+			if (!this.exif || !this.exif.AFAreaMode) {
 				return null
 			}
-			switch (this.meta.exif.AFAreaMode) {
+			switch (this.exif.AFAreaMode) {
 				case 'Flexible Spot': return 'mdi-image-filter-center-focus'
 				case 'Manual': return 'mdi-target'
 				case 'Tracking': return 'mdi-face-recognition'
@@ -220,18 +221,18 @@ export default {
 			return 'mdi-focus-field'
 		},
 		taken() {
-			if (!this.meta || !this.meta.exif || !this.meta.exif.DateTimeOriginal) {
+			if (!this.exif || !this.exif.DateTimeOriginal) {
 				return null
 			}
-			const parts = this.meta.exif.DateTimeOriginal.split(' ')
+			const parts = this.exif.DateTimeOriginal.split(' ')
 			parts[0] = parts[0].replace(/:/g, "-")
 
 			let d = parts.join("T")
 			
-			if ('TimeZone' in this.meta.exif && this.meta.exif.TimeZone) {
-				d += this.meta.exif.TimeZone
-			} else if ('OffsetTime' in this.meta.exif && this.meta.exif.OffsetTime) {
-				d += this.meta.exif.OffsetTime
+			if ('TimeZone' in this.exif && this.exif.TimeZone) {
+				d += this.exif.TimeZone
+			} else if ('OffsetTime' in this.exif && this.exif.OffsetTime) {
+				d += this.exif.OffsetTime
 			}
 
 			return format(parseISO(d), "PPpp")

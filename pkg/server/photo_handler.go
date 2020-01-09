@@ -38,7 +38,7 @@ func (ph *PhotoHandler) List(w http.ResponseWriter, r *http.Request) {
 	if asc := r.URL.Query().Get("sort_dir"); asc == "desc" {
 		ascending = false
 	}
-	photos, dirs, err := ph.s.actions.List(r.Context(), ListReq{
+	ps, dirs, err := ph.s.actions.List(r.Context(), ListReq{
 		Offset: offset,
 		Count:  count,
 		Asc:    ascending,
@@ -50,9 +50,9 @@ func (ph *PhotoHandler) List(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	writeJSON(w, r, struct {
-		Photos []FileInfo `json:"photos"`
-		Dirs   []string   `json:"dirs"`
-	}{photos, dirs})
+		Photos []photos.Photo `json:"photos"`
+		Dirs   []string       `json:"dirs"`
+	}{ps, dirs})
 }
 
 func (ph *PhotoHandler) Get(w http.ResponseWriter, r *http.Request) {
@@ -298,12 +298,15 @@ func (ph *PhotoHandler) Websocket(w http.ResponseWriter, r *http.Request) {
 				resp.Error = "file expected to be a string"
 				break
 			}
-			meta, err := ph.s.mgr.Load(log, photoDir+"/"+file)
-			if err != nil {
+			if p, err := photos.FromSrc(r.Context(), photoDir+"/"+file); err != nil {
 				log.WithError(err).Error("failed to get meta info")
 				resp.Error = "failed to get meta info"
 			} else {
-				resp.Data = meta
+				if m, err := p.Meta(); err != nil {
+					resp.Error = "failed to load meta info"
+				} else {
+					resp.Data = m
+				}
 			}
 		case "":
 			resp.Error = "missing action"
