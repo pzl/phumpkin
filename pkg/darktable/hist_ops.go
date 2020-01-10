@@ -7,6 +7,7 @@ import (
 	"encoding/binary"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"io"
 	"math"
 )
@@ -47,6 +48,12 @@ func decodeParams(params string) ([]byte, error) {
 type Point struct {
 	X float32 `json:"x"`
 	Y float32 `json:"y"`
+}
+
+type RGB struct {
+	R float32 `json:"r"`
+	G float32 `json:"g"`
+	B float32 `json:"b"`
 }
 
 // ----
@@ -361,6 +368,29 @@ func bilat(v int, params string) (BilatParams, error) {
 	return b, nil
 }
 
+type BilateralParams struct {
+	X float32 `json:"x"` // equal, just uses "radius" slider
+	Y float32 `json:"y"` // equal, just uses "radius" slider
+	R float32 `json:"r"`
+	G float32 `json:"g"`
+	B float32 `json:"b"`
+}
+
+func bilateral(v int, params string) (BilateralParams, error) {
+	p, err := decodeParams(params)
+	if err != nil {
+		return BilateralParams{}, err
+	}
+
+	return BilateralParams{
+		X: mkfloat(p[0:4]),
+		Y: mkfloat(p[4:8]),
+		R: mkfloat(p[8:12]),
+		G: mkfloat(p[12:16]),
+		B: mkfloat(p[16:20]),
+	}, nil
+}
+
 type BloomParams struct {
 	Size      float32 `json:"size"`
 	Threshold float32 `json:"threshold"`
@@ -377,6 +407,55 @@ func bloom(v int, params string) (BloomParams, error) {
 		Size:      mkfloat(p[0:4]),
 		Threshold: mkfloat(p[4:8]),
 		Strength:  mkfloat(p[8:12]),
+	}, nil
+}
+
+type CAParams struct {
+	Keep int32 `json:"keep"`
+}
+
+func cacorrect(v int, params string) (CAParams, error) {
+	p, err := decodeParams(params)
+	if err != nil {
+		return CAParams{}, err
+	}
+	return CAParams{int32(binary.LittleEndian.Uint32(p[0:4]))}, nil
+}
+
+// 7 destinations: Hue, Sat, Lightness, R,G,B, Grey
+// and mixing the amount of Red, Green, Blue into each channel
+
+type ChannelMixParams struct {
+	Hue        RGB `json:"hue"`
+	Saturation RGB `json:"saturation"`
+	Lightness  RGB `json:"lightness"`
+	Red        RGB `json:"red"`
+	Green      RGB `json:"green"`
+	Blue       RGB `json:"blue"`
+	Grey       RGB `json:"grey"`
+}
+
+func channelmixer(v int, params string) (ChannelMixParams, error) {
+	p, err := decodeParams(params)
+	if err != nil {
+		return ChannelMixParams{}, err
+	}
+
+	// Memory layout is:
+	// Red   [7]float32
+	// Green [7]float32
+	// Blue  [7]float32
+	// so R <-> G gap is 7*4 = 28
+	const gap = 7 * 4
+
+	return ChannelMixParams{
+		Hue:        RGB{mkfloat(p[0:4]), mkfloat(p[gap : gap+4]), mkfloat(p[gap*2 : gap*2+4])},
+		Saturation: RGB{mkfloat(p[4:8]), mkfloat(p[gap+4 : gap+8]), mkfloat(p[gap*2+4 : gap*2+8])},
+		Lightness:  RGB{mkfloat(p[8:12]), mkfloat(p[gap+8 : gap+12]), mkfloat(p[gap*2+8 : gap*2+12])},
+		Red:        RGB{mkfloat(p[12:16]), mkfloat(p[gap+12 : gap+16]), mkfloat(p[gap*2+12 : gap*2+16])},
+		Green:      RGB{mkfloat(p[16:20]), mkfloat(p[gap+16 : gap+20]), mkfloat(p[gap*2+16 : gap*2+20])},
+		Blue:       RGB{mkfloat(p[20:24]), mkfloat(p[gap+20 : gap+24]), mkfloat(p[gap*2+20 : gap*2+24])},
+		Grey:       RGB{mkfloat(p[24:28]), mkfloat(p[gap+24 : gap+28]), mkfloat(p[gap*2+24 : gap*2+28])},
 	}, nil
 }
 
@@ -397,6 +476,63 @@ func clahe(v int, params string) (LCLContrastParams, error) {
 	}, nil
 }
 
+type ClippingParams struct {
+	Angle    float32 `json:"angle"`
+	Cx       float32 `json:"cx"`
+	Cy       float32 `json:"cy"`
+	Cw       float32 `json:"cw"`
+	Ch       float32 `json:"ch"`
+	Kh       float32 `json:"kh"`
+	Kv       float32 `json:"kv"`
+	KXa      float32 `json:"kxa"`
+	KYa      float32 `json:"kya"`
+	KXb      float32 `json:"kxb"`
+	KYb      float32 `json:"kyb"`
+	KXc      float32 `json:"kxc"`
+	KYc      float32 `json:"kyc"`
+	KXd      float32 `json:"kxd"`
+	KYd      float32 `json:"kyd"`
+	KType    int32   `json:"k_type"`
+	KSym     int32   `json:"k_sym"`
+	KApply   bool    `json:"k_apply"`
+	AutoCrop bool    `json:"auto_crop"`
+	RatioN   int32   `json:"ratio_n"`
+	RatioD   int32   `json:"ratio_d"`
+}
+
+func clipping(v int, params string) (ClippingParams, error) {
+	if v < 5 {
+		return ClippingParams{}, errors.New("unsupported old clipping params. 5+ only")
+	}
+	p, err := decodeParams(params)
+	if err != nil {
+		return ClippingParams{}, err
+	}
+	return ClippingParams{
+		Angle:    mkfloat(p[0:4]),
+		Cx:       mkfloat(p[4:8]),
+		Cy:       mkfloat(p[8:12]),
+		Cw:       mkfloat(p[12:16]),
+		Ch:       mkfloat(p[16:20]),
+		Kh:       mkfloat(p[20:24]),
+		Kv:       mkfloat(p[24:28]),
+		KXa:      mkfloat(p[28:32]),
+		KYa:      mkfloat(p[32:36]),
+		KXb:      mkfloat(p[36:40]),
+		KYb:      mkfloat(p[40:44]),
+		KXc:      mkfloat(p[44:48]),
+		KYc:      mkfloat(p[48:52]),
+		KXd:      mkfloat(p[52:56]),
+		KYd:      mkfloat(p[56:60]),
+		KType:    int32(binary.LittleEndian.Uint32(p[60:64])),
+		KSym:     int32(binary.LittleEndian.Uint32(p[64:68])),
+		KApply:   binary.LittleEndian.Uint32(p[68:72]) != 0,
+		AutoCrop: binary.LittleEndian.Uint32(p[72:76]) != 0,
+		RatioN:   int32(binary.LittleEndian.Uint32(p[76:80])),
+		RatioD:   int32(binary.LittleEndian.Uint32(p[80:84])),
+	}, nil
+}
+
 // contrast brightness saturation
 type ColisaParams struct {
 	Contrast   float32 `json:"contrast"`
@@ -414,6 +550,62 @@ func colisa(v int, params string) (ColisaParams, error) {
 		Contrast:   mkfloat(p[0:4]),
 		Brightness: mkfloat(p[4:8]),
 		Saturation: mkfloat(p[8:12]),
+	}, nil
+}
+
+type ColorBalanceMode int
+
+const (
+	ColorBalanceLGG ColorBalanceMode = iota
+	ColorBalanceSOP
+	ColorBalanceLegacy
+)
+
+func (c ColorBalanceMode) MarshalJSON() ([]byte, error) { return json.Marshal(c.String()) }
+func (c ColorBalanceMode) String() string {
+	switch c {
+	case ColorBalanceLGG:
+		return "Lift-Gamma-Gain"
+	case ColorBalanceSOP:
+		return "Slope-Offset-Power"
+	case ColorBalanceLegacy:
+		return "legacy"
+	}
+	return "unknown"
+}
+
+type ColorBalanceParams struct {
+	Mode          ColorBalanceMode `json:"mode"`
+	Lift          [4]float32       `json:"lift"` // Factor, Red, Green, Blue
+	Gamma         [4]float32       `json:"gamma"`
+	Gain          [4]float32       `json:"gain"`
+	Saturation    float32          `json:"saturation"`
+	Contrast      float32          `json:"contrast"`
+	Grey          float32          `json:"grey"`
+	SaturationOut float32          `json:"saturation_out"`
+}
+
+func colorbalance(v int, params string) (ColorBalanceParams, error) {
+	p, err := decodeParams(params)
+	if err != nil {
+		return ColorBalanceParams{}, err
+	}
+
+	return ColorBalanceParams{
+		Mode: ColorBalanceMode(binary.LittleEndian.Uint32(p[0:4])),
+		Lift: [4]float32{
+			mkfloat(p[4:8]), mkfloat(p[8:12]), mkfloat(p[12:16]), mkfloat(p[16:20]),
+		},
+		Gamma: [4]float32{
+			mkfloat(p[20:24]), mkfloat(p[24:28]), mkfloat(p[28:32]), mkfloat(p[32:36]),
+		},
+		Gain: [4]float32{
+			mkfloat(p[36:40]), mkfloat(p[40:44]), mkfloat(p[44:48]), mkfloat(p[48:52]),
+		},
+		Saturation:    mkfloat(p[52:56]),
+		Contrast:      mkfloat(p[56:60]),
+		Grey:          mkfloat(p[60:64]),
+		SaturationOut: mkfloat(p[64:68]),
 	}, nil
 }
 
@@ -512,6 +704,182 @@ func (d DemosaicGreenEQ) String() string {
 	return "unknown"
 }
 
+type CZChannel int
+
+const (
+	CZChannelL CZChannel = iota
+	CZChannelC
+	CZChannelh
+)
+
+func (c CZChannel) MarshalJSON() ([]byte, error) { return json.Marshal(c.String()) }
+func (c CZChannel) String() string {
+	switch c {
+	case CZChannelL:
+		return "Lightness"
+	case CZChannelC:
+		return "Saturation" // chroma?
+	case CZChannelh:
+		return "Hue"
+	}
+	return "unknown"
+}
+
+type CZCurveType int
+
+const (
+	CZCurveCubicSpline CZCurveType = iota
+	CZCurveCatmullRom
+	CZCurveMonotone
+)
+
+func (c CZCurveType) MarshalJSON() ([]byte, error) { return json.Marshal(c.String()) }
+func (c CZCurveType) String() string {
+	switch c {
+	case CZCurveCubicSpline:
+		return "Cubic spline"
+	case CZCurveCatmullRom:
+		return "Catmull-Rom"
+	case CZCurveMonotone:
+		return "Monotone Hermite"
+	}
+	return "unknown"
+}
+
+type CZMode int
+
+const (
+	CZModeOld CZMode = iota
+	CZModeNew
+)
+
+func (c CZMode) MarshalJSON() ([]byte, error) { return json.Marshal(c.String()) }
+func (c CZMode) String() string {
+	if c == CZModeOld {
+		return "old"
+	}
+	return "new"
+}
+
+type ColorZonesParams struct {
+	Channel     CZChannel      `json:"channel"` // selected channel to view by
+	Curve       [3][20]Point   `json:"curve"`   // 3 channels (L,C,h), 20 max points
+	NCurveNodes [3]int32       `json:"n_nodes"` // number of nodes per curve
+	CurveType   [3]CZCurveType `json:"curve_type"`
+	Strength    float32        `json:"strength"` // is this process mode?
+	Mode        CZMode         `json:"mode"`
+}
+
+func colorzones(v int, params string) (ColorZonesParams, error) {
+	if v < 2 {
+		return ColorZonesParams{}, errors.New("colorzones below v2 not supported")
+	}
+	p, err := decodeParams(params)
+	if err != nil {
+		return ColorZonesParams{}, err
+	}
+
+	if v < 4 {
+		// memory layour:
+		// X [3][8]float32
+		// Y [3][8]float32
+
+		const curvegap = 3 * 8 * 4 * 2 // two [3][8]float32 are the curves here
+
+		c := ColorZonesParams{
+			Channel:     CZChannel(binary.LittleEndian.Uint32(p[0:4])),
+			Strength:    0,
+			NCurveNodes: [3]int32{8, 8, 8},
+			CurveType:   [3]CZCurveType{CZCurveCatmullRom, CZCurveCatmullRom, CZCurveCatmullRom},
+			Mode:        CZModeOld,
+		}
+		if v > 2 {
+			c.Strength = mkfloat(p[curvegap : curvegap+4])
+		}
+
+		p = p[4:] // shift out Channel offset
+		const gap = 3 * 8 * 4
+		for i := 0; i < 3; i++ {
+			for j := 0; j < 8; j++ {
+				c.Curve[i][j] = Point{
+					mkfloat(p[j*4 : j*4+4]), mkfloat(p[gap+j*4 : gap+j*4+4]),
+				}
+			}
+			p = p[8*4:]
+		}
+
+		return c, nil
+	}
+
+	const curvegap = 3 * 20 * 4
+	c := ColorZonesParams{
+		Channel: CZChannel(binary.LittleEndian.Uint32(p[0:4])),
+		NCurveNodes: [3]int32{
+			int32(binary.LittleEndian.Uint32(p[curvegap : curvegap+4])),
+			int32(binary.LittleEndian.Uint32(p[curvegap+4 : curvegap+8])),
+			int32(binary.LittleEndian.Uint32(p[curvegap+8 : curvegap+12])),
+		},
+		CurveType: [3]CZCurveType{
+			CZCurveType(binary.LittleEndian.Uint32(p[curvegap+12 : curvegap+16])),
+			CZCurveType(binary.LittleEndian.Uint32(p[curvegap+16 : curvegap+20])),
+			CZCurveType(binary.LittleEndian.Uint32(p[curvegap+20 : curvegap+24])),
+		},
+		Strength: mkfloat(p[curvegap+24 : curvegap+28]),
+		Mode:     CZMode(binary.LittleEndian.Uint32(p[curvegap+28 : curvegap+32])),
+	}
+
+	p = p[4:] // shift out the Channel offset
+	const row = 20 * 8
+	for i := 0; i < 3; i++ {
+		for j := 0; j < 20; j++ {
+			c.Curve[i][j] = Point{
+				mkfloat(p[i*row+j*8 : i*row+j*8+4]), mkfloat(p[i*row+j*8+4 : i*row+j*8+8]),
+			}
+		}
+	}
+
+	return c, nil
+}
+
+type DefringeMode int
+
+const (
+	DefringeModeGlobalAvg DefringeMode = iota
+	DefringeModeLocalAvg
+	DefringeModeStatic
+)
+
+func (d DefringeMode) MarshalJSON() ([]byte, error) { return json.Marshal(d.String()) }
+func (d DefringeMode) String() string {
+	switch d {
+	case DefringeModeGlobalAvg:
+		return "Global average"
+	case DefringeModeLocalAvg:
+		return "Local average"
+	case DefringeModeStatic:
+		return "Static"
+	}
+	return "unknown"
+}
+
+type DefringeParams struct {
+	Radius    float32      `json:"radius"`
+	Threshold float32      `json:"threshold"`
+	Mode      DefringeMode `json:"mode"`
+}
+
+func defringe(v int, params string) (DefringeParams, error) {
+	p, err := decodeParams(params)
+	if err != nil {
+		return DefringeParams{}, err
+	}
+	return DefringeParams{
+		Radius:    mkfloat(p[0:4]),
+		Threshold: mkfloat(p[4:8]),
+		Mode:      DefringeMode(binary.LittleEndian.Uint32(p[8:12])),
+	}, nil
+}
+
 type DemosaicMethod int
 
 const (
@@ -569,6 +937,53 @@ func demosaic(v int, params string) (DemosaicParams, error) {
 		Method:          DemosaicMethod(binary.LittleEndian.Uint32(p[12:16])),
 		Unused:          binary.LittleEndian.Uint32(p[16:20]),
 	}, nil
+}
+
+type Orientation int
+
+// rotations are specified in a clockwise direction
+// https://www.daveperrett.com/articles/2012/07/28/exif-orientation-handling-is-a-ghetto/
+const (
+	OrientationInvalid Orientation = -1
+	RotNormal          Orientation = 0
+	MirrorVert         Orientation = 1
+	MirrorHoriz        Orientation = 2
+	Rot180             Orientation = 3
+	MirrorHorizRot270  Orientation = 4
+	Rot90              Orientation = 5
+	Rot270             Orientation = 6
+	MirrorHorizRot90   Orientation = 7
+)
+
+func (o Orientation) MarshalJSON() ([]byte, error) { return json.Marshal(o.String()) }
+func (o Orientation) String() string {
+	switch o {
+	case RotNormal:
+		return "Normal"
+	case MirrorVert:
+		return "Mirror vertical"
+	case MirrorHoriz:
+		return "Mirror horizontal"
+	case Rot180:
+		return "Rotate 180"
+	case MirrorHorizRot270:
+		return "Mirror horizontal and rotate 270 CW"
+	case Rot90:
+		return "Rotate 90 CW"
+	case Rot270:
+		return "Rotate 270 CW"
+	case MirrorHorizRot90:
+		return "Mirror horizontal and rotate 90 CW"
+	}
+	return "unknown"
+}
+
+func flip(v int, params string) (Orientation, error) {
+	p, err := decodeParams(params)
+	if err != nil {
+		return OrientationInvalid, err
+	}
+	return Orientation(binary.LittleEndian.Uint32(p[0:4])), nil
 }
 
 type FilmicInterpolator int
@@ -848,6 +1263,32 @@ func highpass(v int, params string) (HighPassParams, error) {
 		Sharpness: mkfloat(p[0:4]),
 		Contrast:  mkfloat(p[4:8]),
 	}, nil
+}
+
+type InvertParams struct {
+	Color [4]float32 `json:"color"`
+}
+
+func invert(v int, params string) (InvertParams, error) {
+	p, err := decodeParams(params)
+	if err != nil {
+		return InvertParams{}, err
+	}
+
+	i := InvertParams{
+		Color: [4]float32{
+			mkfloat(p[0:4]),
+			mkfloat(p[4:8]),
+			mkfloat(p[8:12]),
+			0,
+		},
+	}
+
+	if v > 1 {
+		i.Color[3] = mkfloat(p[12:16])
+	}
+
+	return i, nil
 }
 
 type LevelsMode int

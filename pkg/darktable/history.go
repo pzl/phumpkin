@@ -177,26 +177,42 @@ func ParseOpParams(name string, v int, params string) (interface{}, error) {
 		return atrous(v, params)
 	case "bilat":
 		return bilat(v, params)
+	case "bilateral":
+		return bilateral(v, params)
 	case "bloom":
 		return bloom(v, params)
+	case "cacorrect":
+		return cacorrect(v, params)
+	case "channelmixer":
+		return channelmixer(v, params)
 	case "clahe":
 		return clahe(v, params)
+	case "clipping":
+		return clipping(v, params)
 	case "colisa":
 		return colisa(v, params)
+	case "colorbalance":
+		return colorbalance(v, params)
 	case "colorcontrast":
 		return colorcontrast(v, params)
 	case "colorcorrection":
 		return colorcorrection(v, params)
 	case "colorize":
 		return colorize(v, params)
+	case "colorzones":
+		return colorzones(v, params)
+	case "defringe":
+		return defringe(v, params)
 	case "demosaic":
 		return demosaic(v, params)
+	case "exposure":
+		return exposure(v, params)
 	case "filmic":
 		return filmic(v, params)
 	case "filmicrgb":
 		return filmicrgb(v, params)
-	case "exposure":
-		return exposure(v, params)
+	case "flip":
+		return flip(v, params)
 	case "gamma":
 		return gamma(v, params)
 	case "graduatednd":
@@ -209,6 +225,8 @@ func ParseOpParams(name string, v int, params string) (interface{}, error) {
 		return highlights(v, params)
 	case "highpass":
 		return highpass(v, params)
+	case "invert":
+		return invert(v, params)
 	case "levels":
 		return levels(v, params)
 	case "lowlight":
