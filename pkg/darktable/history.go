@@ -171,6 +171,8 @@ func FriendlyHistoryName(s string) string {
 
 func ParseOpParams(name string, v int, params string) (interface{}, error) {
 	switch name {
+	case "ashift":
+		return ashift(v, params)
 	case "bilat":
 		return bilat(v, params)
 	case "bloom":

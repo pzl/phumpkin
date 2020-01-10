@@ -14,6 +14,98 @@ func mk64f(p []byte) float64   { return math.Float64frombits(binary.LittleEndian
 
 // ----
 
+type AShiftMode int
+
+const (
+	AShiftModeGeneric AShiftMode = iota
+	AShiftModeSpecific
+)
+
+func (a AShiftMode) MarshalJSON() ([]byte, error) { return json.Marshal(a.String()) }
+func (a AShiftMode) String() string {
+	if a == AShiftModeGeneric {
+		return "generic"
+	}
+	return "specific"
+}
+
+type AShiftCropMode int
+
+const (
+	AShiftCropOff AShiftCropMode = iota
+	AShiftCropLargest
+	AShiftCropAspect
+)
+
+func (a AShiftCropMode) MarshalJSON() ([]byte, error) { return json.Marshal(a.String()) }
+func (a AShiftCropMode) String() string {
+	switch a {
+	case AShiftCropOff:
+		return "off"
+	case AShiftCropLargest:
+		return "largest"
+	case AShiftCropAspect:
+		return "aspect"
+	}
+	return "unknown"
+}
+
+type AShiftParams struct {
+	Rotation   float32        `json:"rotation"`
+	LensShiftV float32        `json:"lens_shift_v"`
+	LensShiftH float32        `json:"lens_shift_h"`
+	Shear      float32        `json:"shear"`
+	FLength    float32        `json:"f_length"`
+	CropFactor float32        `json:"crop_factor"`
+	OrthoCorr  float32        `json:"ortho_corr"`
+	Aspect     float32        `json:"aspect"`
+	Mode       AShiftMode     `json:"mode"`
+	Toggle     int            `json:"toggle"`
+	Crop       AShiftCropMode `json:"crop"`
+	CL         float32        `json:"cl"`
+	CR         float32        `json:"cr"`
+	CT         float32        `json:"ct"`
+	CB         float32        `json:"cb"`
+}
+
+func ashift(v int, params string) (AShiftParams, error) {
+	p, err := hex.DecodeString(params)
+	if err != nil {
+		return AShiftParams{}, err
+	}
+
+	a := AShiftParams{
+		Rotation:   mkfloat(p[0:4]),
+		LensShiftV: mkfloat(p[4:8]),
+		LensShiftH: mkfloat(p[8:12]),
+	}
+	if v == 1 {
+		a.Toggle = int(binary.LittleEndian.Uint32(p[12:16]))
+	}
+
+	if v > 1 {
+		i := 0
+
+		if v > 3 {
+			a.Shear = mkfloat(p[12:16])
+			i = 4
+		}
+		a.FLength = mkfloat(p[12+i : 16+i])
+		a.CropFactor = mkfloat(p[16+i : 20+i])
+		a.Aspect = mkfloat(p[24+i : 28+i])
+		a.Mode = AShiftMode(binary.LittleEndian.Uint32(p[28+i : 32+i]))
+		a.Toggle = int(binary.LittleEndian.Uint32(p[: 32+i : 36+i]))
+		if v > 2 {
+			a.Crop = AShiftCropMode(binary.LittleEndian.Uint32(p[36+i : 40+i]))
+			a.CL = mkfloat(p[40+i : 44+i])
+			a.CR = mkfloat(p[44+i : 48+i])
+			a.CT = mkfloat(p[48+i : 52+i])
+			a.CB = mkfloat(p[52+i : 56+i])
+		}
+	}
+	return a, nil
+}
+
 type ExposureMode int
 
 const (
