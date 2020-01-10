@@ -474,3 +474,209 @@ func filmicrgb(v int, params string) (FilmicCommonParams, error) {
 	}, nil
 
 }
+
+type GammaParams struct {
+	Gamma  float32 `json:"gamma"`
+	Linear float32 `json:"linear"`
+}
+
+func gamma(v int, params string) (GammaParams, error) {
+	p, err := hex.DecodeString(params)
+	if err != nil {
+		return GammaParams{}, err
+	}
+
+	return GammaParams{
+		Gamma:  math.Float32frombits(binary.LittleEndian.Uint32(p[0:4])),
+		Linear: math.Float32frombits(binary.LittleEndian.Uint32(p[4:8])),
+	}, nil
+}
+
+type GraduatedNDparams struct {
+	Density    float32 `json:"density"`  // density of filter, 0-8EV
+	Hardness   float32 `json:"hardness"` // 0% soft, 100% hard
+	Rotation   float32 `json:"rotation"` // 2*Pi  -180 <-> 180
+	Offset     float32 `json:"offset"`   // default 50%, can be offset
+	Hue        float32 `json:"hue"`
+	Saturation float32 `json:"saturation"`
+}
+
+func graduatednd(v int, params string) (GraduatedNDparams, error) {
+	p, err := hex.DecodeString(params)
+	if err != nil {
+		return GraduatedNDparams{}, err
+	}
+	return GraduatedNDparams{
+		Density:    math.Float32frombits(binary.LittleEndian.Uint32(p[0:4])),
+		Hardness:   math.Float32frombits(binary.LittleEndian.Uint32(p[4:8])),
+		Rotation:   math.Float32frombits(binary.LittleEndian.Uint32(p[8:12])),
+		Offset:     math.Float32frombits(binary.LittleEndian.Uint32(p[12:16])),
+		Hue:        math.Float32frombits(binary.LittleEndian.Uint32(p[16:20])),
+		Saturation: math.Float32frombits(binary.LittleEndian.Uint32(p[20:24])),
+	}, nil
+}
+
+type GrainChannel int
+
+const (
+	GrainChannelHue GrainChannel = iota
+	GrainChannelSaturation
+	GrainChannelLightness
+	GrainChannelRGB
+)
+
+func (g GrainChannel) MarshalJSON() ([]byte, error) { return json.Marshal(g.String()) }
+func (g GrainChannel) String() string {
+	switch g {
+	case GrainChannelHue:
+		return "hue"
+	case GrainChannelSaturation:
+		return "saturation"
+	case GrainChannelLightness:
+		return "lightness"
+	case GrainChannelRGB:
+		return "rgb"
+	}
+	return "unknown"
+}
+
+type GrainParam struct {
+	Channel     GrainChannel `json:"channel"`
+	Scale       float32      `json:"scale"`
+	Strength    float32      `json:"strength"`
+	MidtoneBias float32      `json:"midtone_bias"`
+}
+
+func grain(v int, params string) (GrainParam, error) {
+	p, err := hex.DecodeString(params)
+	if err != nil {
+		return GrainParam{}, err
+	}
+	g := GrainParam{
+		Channel:  GrainChannel(binary.LittleEndian.Uint32(p[0:4])),
+		Scale:    math.Float32frombits(binary.LittleEndian.Uint32(p[4:8])),
+		Strength: math.Float32frombits(binary.LittleEndian.Uint32(p[8:12])),
+	}
+	if v > 1 {
+		g.MidtoneBias = math.Float32frombits(binary.LittleEndian.Uint32(p[12:16]))
+	}
+	return g, nil
+}
+
+type HazeParams struct {
+	Strength float32 `json:"strength"`
+	Distance float32 `json:"distance"`
+}
+
+func hazeremoval(v int, params string) (HazeParams, error) {
+	p, err := hex.DecodeString(params)
+	if err != nil {
+		return HazeParams{}, err
+	}
+	return HazeParams{
+		Strength: math.Float32frombits(binary.LittleEndian.Uint32(p[0:4])),
+		Distance: math.Float32frombits(binary.LittleEndian.Uint32(p[4:8])),
+	}, nil
+}
+
+type HighlightsMode int
+
+const (
+	HighlightsClip HighlightsMode = iota
+	HighlightsLCh
+	HighlightsInpaint
+)
+
+func (h HighlightsMode) MarshalJSON() ([]byte, error) { return json.Marshal(h.String()) }
+func (h HighlightsMode) String() string {
+	switch h {
+	case HighlightsClip:
+		return "clip hightlights"
+	case HighlightsLCh:
+		return "reconstruct in LCh"
+	case HighlightsInpaint:
+		return "reconstruct in color"
+	}
+	return "unknown"
+}
+
+type HighlightsParams struct {
+	Mode   HighlightsMode `json:"mode"`
+	BlendL float32        `json:"-"` // unused
+	BlendC float32        `json:"-"`
+	BlendH float32        `json:"-"`
+	Clip   float32        `json:"clip"`
+}
+
+func highlights(v int, params string) (HighlightsParams, error) {
+	p, err := hex.DecodeString(params)
+	if err != nil {
+		return HighlightsParams{}, err
+	}
+	h := HighlightsParams{
+		Mode: HighlightsMode(binary.LittleEndian.Uint32(p[0:4])),
+		Clip: 1.0,
+	}
+	if v > 1 {
+		h.Clip = math.Float32frombits(binary.LittleEndian.Uint32(p[16:20]))
+	}
+	return h, nil
+}
+
+type HighPassParams struct {
+	Sharpness float32 `json:"sharpness"`
+	Contrast  float32 `json:"contrast"`
+}
+
+func highpass(v int, params string) (HighPassParams, error) {
+	p, err := hex.DecodeString(params)
+	if err != nil {
+		return HighPassParams{}, err
+	}
+	return HighPassParams{
+		Sharpness: math.Float32frombits(binary.LittleEndian.Uint32(p[0:4])),
+		Contrast:  math.Float32frombits(binary.LittleEndian.Uint32(p[4:8])),
+	}, nil
+}
+
+type LevelsMode int
+
+const (
+	LevelsManual LevelsMode = iota
+	LevelsAutomatic
+)
+
+func (l LevelsMode) MarshalJSON() ([]byte, error) { return json.Marshal(l.String()) }
+func (l LevelsMode) String() string {
+	if l == LevelsManual {
+		return "manual"
+	}
+	return "automatic"
+}
+
+type LevelsParams struct {
+	Mode        LevelsMode `json:"mode"`
+	Percentiles [3]float32 `json:"percentiles"`
+	Levels      [3]float32 `json:"levels"`
+}
+
+func levels(v int, params string) (LevelsParams, error) {
+	p, err := hex.DecodeString(params)
+	if err != nil {
+		return LevelsParams{}, err
+	}
+
+	return LevelsParams{
+		Mode: LevelsMode(binary.LittleEndian.Uint32(p[0:4])),
+		Percentiles: [3]float32{
+			math.Float32frombits(binary.LittleEndian.Uint32(p[4:8])),
+			math.Float32frombits(binary.LittleEndian.Uint32(p[8:12])),
+			math.Float32frombits(binary.LittleEndian.Uint32(p[12:16])),
+		},
+		Levels: [3]float32{
+			math.Float32frombits(binary.LittleEndian.Uint32(p[16:20])),
+			math.Float32frombits(binary.LittleEndian.Uint32(p[20:24])),
+			math.Float32frombits(binary.LittleEndian.Uint32(p[24:28])),
+		},
+	}, nil
+}

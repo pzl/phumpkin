@@ -193,6 +193,20 @@ func ParseOpParams(name string, v int, params string) (interface{}, error) {
 		return filmicrgb(v, params)
 	case "exposure":
 		return exposure(v, params)
+	case "gamma":
+		return gamma(v, params)
+	case "graduatednd":
+		return graduatednd(v, params)
+	case "grain":
+		return grain(v, params)
+	case "hazeremoval":
+		return hazeremoval(v, params)
+	case "highlights":
+		return highlights(v, params)
+	case "highpass":
+		return highpass(v, params)
+	case "levels":
+		return levels(v, params)
 	case "vibrance":
 		return vibrance(v, params)
 	case "sharpen":
