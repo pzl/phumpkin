@@ -207,12 +207,33 @@ func ParseOpParams(name string, v int, params string) (interface{}, error) {
 		return highpass(v, params)
 	case "levels":
 		return levels(v, params)
-	case "vibrance":
-		return vibrance(v, params)
+	case "lowlight":
+		return lowlight(v, params)
+	case "lowpass":
+		return lowpass(v, params)
+	case "monochrome":
+		return monochrome(v, params)
+	case "nlmeans":
+		return nlmeans(v, params)
+	case "relight":
+		return relight(v, params)
+	case "shadhi":
+		return shadhi(v, params)
 	case "sharpen":
 		return sharpen(v, params)
 	case "soften":
 		return soften(v, params)
+	case "splittoning":
+		return splittoning(v, params)
+	case "tonemap":
+		return tonemap(v, params)
+	case "velvia":
+		return velvia(v, params)
+	case "vibrance":
+		return vibrance(v, params)
+	case "zonesystem":
+		return zonesystem(v, params)
+
 	}
 
 	return nil, nil

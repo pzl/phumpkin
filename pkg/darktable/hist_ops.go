@@ -681,3 +681,330 @@ func levels(v int, params string) (LevelsParams, error) {
 		},
 	}, nil
 }
+
+type LowlightParams struct {
+	Blueness     float32    `json:"blueness"`
+	TransitionX  [6]float32 `json:"transition_x"`
+	TransistionY [6]float32 `json:"transition_y"`
+}
+
+func lowlight(v int, params string) (LowlightParams, error) {
+	p, err := hex.DecodeString(params)
+	if err != nil {
+		return LowlightParams{}, err
+	}
+
+	return LowlightParams{
+		Blueness: mkfloat(p[0:4]),
+		TransitionX: [6]float32{
+			mkfloat(p[4:8]), mkfloat(p[8:12]), mkfloat(p[12:16]),
+			mkfloat(p[16:20]), mkfloat(p[20:24]), mkfloat(p[24:28]),
+		},
+		TransistionY: [6]float32{
+			mkfloat(p[28:32]), mkfloat(p[32:36]), mkfloat(p[36:40]),
+			mkfloat(p[40:44]), mkfloat(p[44:48]), mkfloat(p[48:52]),
+		},
+	}, nil
+}
+
+type LowpassAlgo int
+
+const (
+	LowpassGaussian LowpassAlgo = iota
+	LowpassBilateral
+)
+
+func (l LowpassAlgo) MarshalJSON() ([]byte, error) { return json.Marshal(l.String()) }
+func (l LowpassAlgo) String() string {
+	if l == LowpassGaussian {
+		return "gaussian"
+	}
+	return "bilateral"
+}
+
+type LowpassParams struct {
+	Order      uint32      `json:"order"`
+	Radius     float32     `json:"radius"`
+	Contrast   float32     `json:"contrast"`
+	Brightness float32     `json:"brightness"`
+	Saturation float32     `json:"saturation"`
+	Algorithm  LowpassAlgo `json:"algo"`
+	Unbound    bool        `json:"unbound"`
+}
+
+func lowpass(v int, params string) (LowpassParams, error) {
+	p, err := hex.DecodeString(params)
+	if err != nil {
+		return LowpassParams{}, err
+	}
+
+	l := LowpassParams{
+		Order:      binary.LittleEndian.Uint32(p[0:4]),
+		Radius:     mkfloat(p[4:8]),
+		Contrast:   mkfloat(p[8:12]),
+		Saturation: mkfloat(p[12:16]),
+	}
+
+	if v > 1 {
+		l.Brightness = mkfloat(p[12:16])
+		l.Saturation = mkfloat(p[16:20])
+	}
+	if v == 3 {
+		l.Unbound = binary.LittleEndian.Uint32(p[20:24]) > 0
+	}
+	if v == 4 {
+		l.Algorithm = LowpassAlgo(binary.LittleEndian.Uint32(p[20:24]))
+		l.Unbound = binary.LittleEndian.Uint32(p[24:28]) > 0
+	}
+
+	return l, nil
+}
+
+type MonochromeParams struct {
+	A          float32 `json:"a"`
+	B          float32 `json:"b"`
+	Size       float32 `json:"size"`
+	Highlights float32 `json:"highlights"`
+}
+
+func monochrome(v int, params string) (MonochromeParams, error) {
+	p, err := hex.DecodeString(params)
+	if err != nil {
+		return MonochromeParams{}, err
+	}
+
+	m := MonochromeParams{
+		A:          mkfloat(p[0:4]),
+		B:          mkfloat(p[4:8]),
+		Size:       mkfloat(p[8:12]),
+		Highlights: 0,
+	}
+
+	if v > 1 {
+		m.Highlights = mkfloat(p[12:16])
+	}
+
+	return m, nil
+}
+
+type NLMeansParams struct {
+	Radius   float32 `json:"radius"`
+	Strength float32 `json:"strength"`
+	Luma     float32 `json:"luma"`
+	Chroma   float32 `json:"chroma"`
+}
+
+func nlmeans(v int, params string) (NLMeansParams, error) {
+	p, err := hex.DecodeString(params)
+	if err != nil {
+		return NLMeansParams{}, err
+	}
+
+	i := 8
+	if v == 1 {
+		i = 0
+	}
+	n := NLMeansParams{
+		Luma:     mkfloat(p[i : i+4]),
+		Chroma:   mkfloat(p[i+4 : i+8]),
+		Radius:   3, // v1 defaults
+		Strength: 100,
+	}
+
+	if v > 1 {
+		n.Radius = mkfloat(p[0:4])
+		n.Strength = mkfloat(p[4:8])
+	}
+
+	return n, nil
+}
+
+type RelightAlgo int
+
+const (
+	RelightGaussian RelightAlgo = iota
+	RelightBilateral
+)
+
+func (r RelightAlgo) MarshalJSON() ([]byte, error) { return json.Marshal(r.String()) }
+func (r RelightAlgo) String() string {
+	if r == RelightGaussian {
+		return "gaussian"
+	}
+	return "bilateral"
+}
+
+type RelightParams struct {
+	EV     float32 `json:"ev"`
+	Center float32 `json:"center"`
+	Width  float32 `json:"width"`
+}
+
+func relight(v int, params string) (RelightParams, error) {
+	p, err := hex.DecodeString(params)
+	if err != nil {
+		return RelightParams{}, err
+	}
+	return RelightParams{
+		EV:     mkfloat(p[0:4]),
+		Center: mkfloat(p[4:8]),
+		Width:  mkfloat(p[8:12]),
+	}, nil
+}
+
+type ShadhiAlgo int
+
+const (
+	ShadhiGaussian ShadhiAlgo = iota
+	ShadhiBilateral
+)
+
+func (s ShadhiAlgo) MarshalJSON() ([]byte, error) { return json.Marshal(s.String()) }
+func (s ShadhiAlgo) String() string {
+	if s == ShadhiGaussian {
+		return "gaussian"
+	}
+	return "bilateral"
+}
+
+type ShadhiParams struct {
+	Order              uint32     `json:"order"`
+	Radius             float32    `json:"radius"`
+	Shadows            float32    `json:"shadows"`
+	Whitepoint         float32    `json:"whitepoint"` // reserved1
+	Highlights         float32    `json:"highlights"`
+	Reserved2          float32    `json:"-"`
+	Compress           float32    `json:"compress"`
+	ShadowsCCorrect    float32    `json:"shadows_ccorrect"`
+	HighlightsCCorrect float32    `json:"highlights_ccorrect"`
+	Flags              uint32     `json:"flags"`
+	LowApprox          float32    `json:"low_approximation"`
+	Algorithm          ShadhiAlgo `json:"algo"`
+}
+
+func shadhi(v int, params string) (ShadhiParams, error) {
+	p, err := hex.DecodeString(params)
+	if err != nil {
+		return ShadhiParams{}, err
+	}
+
+	s := ShadhiParams{
+		Order:           binary.LittleEndian.Uint32(p[0:4]),
+		Radius:          mkfloat(p[4:8]),
+		Shadows:         mkfloat(p[8:12]),
+		Whitepoint:      mkfloat(p[12:16]), // reserved1 / ignored for v3 and below
+		Highlights:      mkfloat(p[16:20]),
+		Compress:        mkfloat(p[24:28]), // note skipped space for reserved2
+		LowApprox:       0.01,
+		ShadowsCCorrect: 100,
+	}
+
+	if v > 1 {
+		s.ShadowsCCorrect = mkfloat(p[28:32])
+		s.HighlightsCCorrect = mkfloat(p[32:36])
+	}
+	if v > 2 {
+		s.Flags = binary.LittleEndian.Uint32(p[36:40])
+	}
+	if v > 3 {
+		s.LowApprox = mkfloat(p[40:44])
+	}
+	if v > 4 {
+		s.Algorithm = ShadhiAlgo(binary.LittleEndian.Uint32(p[44:48]))
+	}
+
+	return s, nil
+}
+
+type SplitToneParams struct {
+	ShadowHue           float32 `json:"shadow_hue"`
+	ShadowSaturation    float32 `json:"shadow_saturation"`
+	HighlightHue        float32 `json:"highlight_hue"`
+	HighlightSaturation float32 `json:"highlight_saturation"`
+	Balance             float32 `json:"balance"`
+	Compress            float32 `json:"compress"`
+}
+
+func splittoning(v int, params string) (SplitToneParams, error) {
+	p, err := hex.DecodeString(params)
+	if err != nil {
+		return SplitToneParams{}, err
+	}
+
+	return SplitToneParams{
+		ShadowHue:           mkfloat(p[0:4]),
+		ShadowSaturation:    mkfloat(p[4:8]),
+		HighlightHue:        mkfloat(p[8:12]),
+		HighlightSaturation: mkfloat(p[12:16]),
+		Balance:             mkfloat(p[16:20]),
+		Compress:            mkfloat(p[20:24]),
+	}, nil
+}
+
+type ToneMapParams struct {
+	Contrast float32 `json:"contrast"`
+	FSize    float32 `json:"f_size"`
+}
+
+func tonemap(v int, params string) (ToneMapParams, error) {
+	p, err := hex.DecodeString(params)
+	if err != nil {
+		return ToneMapParams{}, err
+	}
+
+	return ToneMapParams{
+		Contrast: mkfloat(p[0:4]),
+		FSize:    mkfloat(p[4:8]),
+	}, nil
+}
+
+func velvia(v int, params string) (interface{}, error) {
+	p, err := hex.DecodeString(params)
+	if err != nil {
+		return nil, err
+	}
+
+	if v == 1 {
+		return struct {
+			Saturation float32 `json:"saturation"`
+			Vibrance   float32 `json:"vibrance"`
+			Luminance  float32 `json:"luminance"`
+			Clarity    float32 `json:"clarity"`
+		}{
+			Saturation: mkfloat(p[0:4]),
+			Vibrance:   mkfloat(p[4:8]),
+			Luminance:  mkfloat(p[8:12]),
+			Clarity:    mkfloat(p[12:16]),
+		}, nil
+	}
+
+	return struct {
+		Strength float32 `json:"strength"`
+		Bias     float32 `json:"bias"`
+	}{
+		Strength: mkfloat(p[0:4]),
+		Bias:     mkfloat(p[4:8]),
+	}, nil
+}
+
+type ZoneSystemParams struct {
+	Size int         `json:"size"`
+	Zone [25]float32 `json:"zone"`
+}
+
+func zonesystem(v int, params string) (ZoneSystemParams, error) {
+	p, err := hex.DecodeString(params)
+	if err != nil {
+		return ZoneSystemParams{}, err
+	}
+
+	z := ZoneSystemParams{
+		Size: int(binary.LittleEndian.Uint32(p[0:4])),
+	}
+
+	for i := 4; i < len(p); i += 4 {
+		z.Zone[(i-4)/4] = mkfloat(p[i : i+4])
+	}
+
+	return z, nil
+}
