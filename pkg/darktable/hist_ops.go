@@ -12,6 +12,11 @@ import (
 func mkfloat(p []byte) float32 { return math.Float32frombits(binary.LittleEndian.Uint32(p)) }
 func mk64f(p []byte) float64   { return math.Float64frombits(binary.LittleEndian.Uint64(p)) }
 
+type Point struct {
+	X float32 `json:"x"`
+	Y float32 `json:"y"`
+}
+
 // ----
 
 type AShiftMode int
@@ -104,6 +109,83 @@ func ashift(v int, params string) (AShiftParams, error) {
 		}
 	}
 	return a, nil
+}
+
+type AtrousParams struct {
+	Octaves int32 `json:"octaves"`
+	/* as laid out in atrous.c
+	X       [5][6]float32 `json:"x"`
+	Y       [5][6]float32 `json:"y"`
+	*/
+	Luminance   [6]Point `json:"luminance"`
+	Chrominance [6]Point `json:"chrominance"`
+	Sharpness   [6]Point `json:"sharpness"`
+	LumNoise    [6]Point `json:"luminance_noise"`
+	ChrNoise    [6]Point `json:"chrominance_noise"`
+}
+
+func atrous(v int, params string) (AtrousParams, error) {
+	p, err := hex.DecodeString(params)
+	if err != nil {
+		return AtrousParams{}, err
+	}
+
+	a := AtrousParams{
+		Octaves: int32(binary.LittleEndian.Uint32(p[0:4])),
+	}
+	p = p[4:] // easy way to offset
+
+	// memory layout is:
+	// var x [5][6]float32
+	// var y [5][6]float32
+	// so 5*6*4 = 120 offset between a corresponding X and Y
+
+	a.Luminance = [6]Point{
+		Point{mkfloat(p[0:4]), mkfloat(p[120+0 : 120+4])},
+		Point{mkfloat(p[4:8]), mkfloat(p[120+4 : 120+8])},
+		Point{mkfloat(p[8:12]), mkfloat(p[120+8 : 120+12])},
+		Point{mkfloat(p[12:16]), mkfloat(p[120+12 : 120+16])},
+		Point{mkfloat(p[16:20]), mkfloat(p[120+16 : 120+20])},
+		Point{mkfloat(p[20:24]), mkfloat(p[120+20 : 120+24])},
+	}
+	p = p[24:] // shift off luminance, 120-offset remains constant
+	a.Chrominance = [6]Point{
+		Point{mkfloat(p[0:4]), mkfloat(p[120+0 : 120+4])},
+		Point{mkfloat(p[4:8]), mkfloat(p[120+4 : 120+8])},
+		Point{mkfloat(p[8:12]), mkfloat(p[120+8 : 120+12])},
+		Point{mkfloat(p[12:16]), mkfloat(p[120+12 : 120+16])},
+		Point{mkfloat(p[16:20]), mkfloat(p[120+16 : 120+20])},
+		Point{mkfloat(p[20:24]), mkfloat(p[120+20 : 120+24])},
+	}
+	p = p[24:]
+	a.Sharpness = [6]Point{
+		Point{mkfloat(p[0:4]), mkfloat(p[120+0 : 120+4])},
+		Point{mkfloat(p[4:8]), mkfloat(p[120+4 : 120+8])},
+		Point{mkfloat(p[8:12]), mkfloat(p[120+8 : 120+12])},
+		Point{mkfloat(p[12:16]), mkfloat(p[120+12 : 120+16])},
+		Point{mkfloat(p[16:20]), mkfloat(p[120+16 : 120+20])},
+		Point{mkfloat(p[20:24]), mkfloat(p[120+20 : 120+24])},
+	}
+	p = p[24:]
+	a.LumNoise = [6]Point{
+		Point{mkfloat(p[0:4]), mkfloat(p[120+0 : 120+4])},
+		Point{mkfloat(p[4:8]), mkfloat(p[120+4 : 120+8])},
+		Point{mkfloat(p[8:12]), mkfloat(p[120+8 : 120+12])},
+		Point{mkfloat(p[12:16]), mkfloat(p[120+12 : 120+16])},
+		Point{mkfloat(p[16:20]), mkfloat(p[120+16 : 120+20])},
+		Point{mkfloat(p[20:24]), mkfloat(p[120+20 : 120+24])},
+	}
+	p = p[24:]
+	a.ChrNoise = [6]Point{
+		Point{mkfloat(p[0:4]), mkfloat(p[120+0 : 120+4])},
+		Point{mkfloat(p[4:8]), mkfloat(p[120+4 : 120+8])},
+		Point{mkfloat(p[8:12]), mkfloat(p[120+8 : 120+12])},
+		Point{mkfloat(p[12:16]), mkfloat(p[120+12 : 120+16])},
+		Point{mkfloat(p[16:20]), mkfloat(p[120+16 : 120+20])},
+		Point{mkfloat(p[20:24]), mkfloat(p[120+20 : 120+24])},
+	}
+	return a, nil
+
 }
 
 type ExposureMode int
