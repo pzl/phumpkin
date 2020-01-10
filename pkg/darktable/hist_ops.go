@@ -1,9 +1,13 @@
 package darktable
 
 import (
+	"bytes"
+	"compress/zlib"
+	"encoding/base64"
 	"encoding/binary"
 	"encoding/hex"
 	"encoding/json"
+	"io"
 	"math"
 )
 
@@ -11,6 +15,34 @@ import (
 
 func mkfloat(p []byte) float32 { return math.Float32frombits(binary.LittleEndian.Uint32(p)) }
 func mk64f(p []byte) float64   { return math.Float64frombits(binary.LittleEndian.Uint64(p)) }
+
+// turns XMP param string into binary bytes. Detects b64 & compression vs hex
+func decodeParams(params string) ([]byte, error) {
+	// in darktable v3, large params are now compressed & base64'd
+	// see src/common/exif.cc :: dt_exif_xmp_encode_internal()
+	if params[0:2] == "gz" {
+		//factor := 10*int(params[2]-'0') + int(params[3]-'0')
+		// factor is next 2 bytes, can ignore
+		comp, err := base64.StdEncoding.DecodeString(params[4:])
+		if err != nil {
+			return nil, err
+		}
+		var out bytes.Buffer
+		z, err := zlib.NewReader(bytes.NewReader(comp))
+		if err != nil {
+			return nil, err
+		}
+		_, err = io.Copy(&out, z)
+		if err != nil {
+			return nil, err
+		}
+		if err := z.Close(); err != nil {
+			return nil, err
+		}
+		return out.Bytes(), nil
+	}
+	return hex.DecodeString(params)
+}
 
 type Point struct {
 	X float32 `json:"x"`
@@ -74,7 +106,7 @@ type AShiftParams struct {
 }
 
 func ashift(v int, params string) (AShiftParams, error) {
-	p, err := hex.DecodeString(params)
+	p, err := decodeParams(params)
 	if err != nil {
 		return AShiftParams{}, err
 	}
@@ -125,7 +157,7 @@ type AtrousParams struct {
 }
 
 func atrous(v int, params string) (AtrousParams, error) {
-	p, err := hex.DecodeString(params)
+	p, err := decodeParams(params)
 	if err != nil {
 		return AtrousParams{}, err
 	}
@@ -212,7 +244,7 @@ type ExposureParams struct {
 }
 
 func exposure(v int, params string) (ExposureParams, error) {
-	p, err := hex.DecodeString(params)
+	p, err := decodeParams(params)
 	if err != nil {
 		return ExposureParams{}, err
 	}
@@ -230,7 +262,7 @@ type SingleFloatAmount struct {
 }
 
 func vibrance(v int, params string) (SingleFloatAmount, error) {
-	p, err := hex.DecodeString(params)
+	p, err := decodeParams(params)
 	if err != nil {
 		return SingleFloatAmount{}, err
 	}
@@ -247,7 +279,7 @@ type SharpenParams struct {
 }
 
 func sharpen(v int, params string) (SharpenParams, error) {
-	p, err := hex.DecodeString(params)
+	p, err := decodeParams(params)
 	if err != nil {
 		return SharpenParams{}, err
 	}
@@ -267,7 +299,7 @@ type SoftenParams struct {
 }
 
 func soften(v int, params string) (SoftenParams, error) {
-	p, err := hex.DecodeString(params)
+	p, err := decodeParams(params)
 	if err != nil {
 		return SoftenParams{}, err
 	}
@@ -302,7 +334,7 @@ type BilatParams struct {
 }
 
 func bilat(v int, params string) (BilatParams, error) {
-	p, err := hex.DecodeString(params)
+	p, err := decodeParams(params)
 	if err != nil {
 		return BilatParams{}, err
 	}
@@ -336,7 +368,7 @@ type BloomParams struct {
 }
 
 func bloom(v int, params string) (BloomParams, error) {
-	p, err := hex.DecodeString(params)
+	p, err := decodeParams(params)
 	if err != nil {
 		return BloomParams{}, err
 	}
@@ -354,7 +386,7 @@ type LCLContrastParams struct {
 }
 
 func clahe(v int, params string) (LCLContrastParams, error) {
-	p, err := hex.DecodeString(params)
+	p, err := decodeParams(params)
 	if err != nil {
 		return LCLContrastParams{}, err
 	}
@@ -373,7 +405,7 @@ type ColisaParams struct {
 }
 
 func colisa(v int, params string) (ColisaParams, error) {
-	p, err := hex.DecodeString(params)
+	p, err := decodeParams(params)
 	if err != nil {
 		return ColisaParams{}, err
 	}
@@ -394,7 +426,7 @@ type ColorContrastParams struct {
 }
 
 func colorcontrast(v int, params string) (ColorContrastParams, error) {
-	p, err := hex.DecodeString(params)
+	p, err := decodeParams(params)
 	if err != nil {
 		return ColorContrastParams{}, err
 	}
@@ -421,7 +453,7 @@ type ColorCorrectionParams struct {
 }
 
 func colorcorrection(v int, params string) (ColorCorrectionParams, error) {
-	p, err := hex.DecodeString(params)
+	p, err := decodeParams(params)
 	if err != nil {
 		return ColorCorrectionParams{}, err
 	}
@@ -443,7 +475,7 @@ type ColorizeParams struct {
 }
 
 func colorize(v int, params string) (ColorizeParams, error) {
-	p, err := hex.DecodeString(params)
+	p, err := decodeParams(params)
 	if err != nil {
 		return ColorizeParams{}, err
 	}
@@ -525,7 +557,7 @@ type DemosaicParams struct {
 }
 
 func demosaic(v int, params string) (DemosaicParams, error) {
-	p, err := hex.DecodeString(params)
+	p, err := decodeParams(params)
 	if err != nil {
 		return DemosaicParams{}, err
 	}
@@ -588,7 +620,7 @@ type FilmicParams struct {
 }
 
 func filmic(v int, params string) (FilmicParams, error) {
-	p, err := hex.DecodeString(params)
+	p, err := decodeParams(params)
 	if err != nil {
 		return FilmicParams{}, err
 	}
@@ -631,7 +663,7 @@ func filmic(v int, params string) (FilmicParams, error) {
 }
 
 func filmicrgb(v int, params string) (FilmicCommonParams, error) {
-	p, err := hex.DecodeString(params)
+	p, err := decodeParams(params)
 	if err != nil {
 		return FilmicCommonParams{}, err
 	}
@@ -660,7 +692,7 @@ type GammaParams struct {
 }
 
 func gamma(v int, params string) (GammaParams, error) {
-	p, err := hex.DecodeString(params)
+	p, err := decodeParams(params)
 	if err != nil {
 		return GammaParams{}, err
 	}
@@ -681,7 +713,7 @@ type GraduatedNDparams struct {
 }
 
 func graduatednd(v int, params string) (GraduatedNDparams, error) {
-	p, err := hex.DecodeString(params)
+	p, err := decodeParams(params)
 	if err != nil {
 		return GraduatedNDparams{}, err
 	}
@@ -727,7 +759,7 @@ type GrainParam struct {
 }
 
 func grain(v int, params string) (GrainParam, error) {
-	p, err := hex.DecodeString(params)
+	p, err := decodeParams(params)
 	if err != nil {
 		return GrainParam{}, err
 	}
@@ -748,7 +780,7 @@ type HazeParams struct {
 }
 
 func hazeremoval(v int, params string) (HazeParams, error) {
-	p, err := hex.DecodeString(params)
+	p, err := decodeParams(params)
 	if err != nil {
 		return HazeParams{}, err
 	}
@@ -788,7 +820,7 @@ type HighlightsParams struct {
 }
 
 func highlights(v int, params string) (HighlightsParams, error) {
-	p, err := hex.DecodeString(params)
+	p, err := decodeParams(params)
 	if err != nil {
 		return HighlightsParams{}, err
 	}
@@ -808,7 +840,7 @@ type HighPassParams struct {
 }
 
 func highpass(v int, params string) (HighPassParams, error) {
-	p, err := hex.DecodeString(params)
+	p, err := decodeParams(params)
 	if err != nil {
 		return HighPassParams{}, err
 	}
@@ -840,7 +872,7 @@ type LevelsParams struct {
 }
 
 func levels(v int, params string) (LevelsParams, error) {
-	p, err := hex.DecodeString(params)
+	p, err := decodeParams(params)
 	if err != nil {
 		return LevelsParams{}, err
 	}
@@ -863,7 +895,7 @@ type LowlightParams struct {
 }
 
 func lowlight(v int, params string) (LowlightParams, error) {
-	p, err := hex.DecodeString(params)
+	p, err := decodeParams(params)
 	if err != nil {
 		return LowlightParams{}, err
 	}
@@ -907,7 +939,7 @@ type LowpassParams struct {
 }
 
 func lowpass(v int, params string) (LowpassParams, error) {
-	p, err := hex.DecodeString(params)
+	p, err := decodeParams(params)
 	if err != nil {
 		return LowpassParams{}, err
 	}
@@ -942,7 +974,7 @@ type MonochromeParams struct {
 }
 
 func monochrome(v int, params string) (MonochromeParams, error) {
-	p, err := hex.DecodeString(params)
+	p, err := decodeParams(params)
 	if err != nil {
 		return MonochromeParams{}, err
 	}
@@ -969,7 +1001,7 @@ type NLMeansParams struct {
 }
 
 func nlmeans(v int, params string) (NLMeansParams, error) {
-	p, err := hex.DecodeString(params)
+	p, err := decodeParams(params)
 	if err != nil {
 		return NLMeansParams{}, err
 	}
@@ -1015,7 +1047,7 @@ type RelightParams struct {
 }
 
 func relight(v int, params string) (RelightParams, error) {
-	p, err := hex.DecodeString(params)
+	p, err := decodeParams(params)
 	if err != nil {
 		return RelightParams{}, err
 	}
@@ -1057,7 +1089,7 @@ type ShadhiParams struct {
 }
 
 func shadhi(v int, params string) (ShadhiParams, error) {
-	p, err := hex.DecodeString(params)
+	p, err := decodeParams(params)
 	if err != nil {
 		return ShadhiParams{}, err
 	}
@@ -1100,7 +1132,7 @@ type SplitToneParams struct {
 }
 
 func splittoning(v int, params string) (SplitToneParams, error) {
-	p, err := hex.DecodeString(params)
+	p, err := decodeParams(params)
 	if err != nil {
 		return SplitToneParams{}, err
 	}
@@ -1121,7 +1153,7 @@ type ToneMapParams struct {
 }
 
 func tonemap(v int, params string) (ToneMapParams, error) {
-	p, err := hex.DecodeString(params)
+	p, err := decodeParams(params)
 	if err != nil {
 		return ToneMapParams{}, err
 	}
@@ -1133,7 +1165,7 @@ func tonemap(v int, params string) (ToneMapParams, error) {
 }
 
 func velvia(v int, params string) (interface{}, error) {
-	p, err := hex.DecodeString(params)
+	p, err := decodeParams(params)
 	if err != nil {
 		return nil, err
 	}
@@ -1167,7 +1199,7 @@ type ZoneSystemParams struct {
 }
 
 func zonesystem(v int, params string) (ZoneSystemParams, error) {
-	p, err := hex.DecodeString(params)
+	p, err := decodeParams(params)
 	if err != nil {
 		return ZoneSystemParams{}, err
 	}
