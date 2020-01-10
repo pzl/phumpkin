@@ -9,6 +9,11 @@ import (
 
 /* Generic or reused across functions */
 
+func mkfloat(p []byte) float32 { return math.Float32frombits(binary.LittleEndian.Uint32(p)) }
+func mk64f(p []byte) float64   { return math.Float64frombits(binary.LittleEndian.Uint64(p)) }
+
+// ----
+
 type ExposureMode int
 
 const (
@@ -39,10 +44,10 @@ func exposure(v int, params string) (ExposureParams, error) {
 	}
 	return ExposureParams{
 		Mode:            ExposureMode(uint8(p[0])),
-		Black:           math.Float32frombits(binary.LittleEndian.Uint32(p[4:8])),
-		Exposure:        math.Float32frombits(binary.LittleEndian.Uint32(p[8:12])),
-		DeflickerPerctl: math.Float32frombits(binary.LittleEndian.Uint32(p[12:16])),
-		DeflickerTgt:    math.Float32frombits(binary.LittleEndian.Uint32(p[16:20])),
+		Black:           mkfloat(p[4:8]),
+		Exposure:        mkfloat(p[8:12]),
+		DeflickerPerctl: mkfloat(p[12:16]),
+		DeflickerTgt:    mkfloat(p[16:20]),
 	}, nil
 }
 
@@ -57,7 +62,7 @@ func vibrance(v int, params string) (SingleFloatAmount, error) {
 	}
 
 	return SingleFloatAmount{
-		Amount: math.Float32frombits(binary.LittleEndian.Uint32(p)),
+		Amount: mkfloat(p),
 	}, nil
 }
 
@@ -74,9 +79,9 @@ func sharpen(v int, params string) (SharpenParams, error) {
 	}
 
 	return SharpenParams{
-		Radius:    math.Float32frombits(binary.LittleEndian.Uint32(p[0:4])),
-		Amount:    math.Float32frombits(binary.LittleEndian.Uint32(p[4:8])),
-		Threshold: math.Float32frombits(binary.LittleEndian.Uint32(p[8:12])),
+		Radius:    mkfloat(p[0:4]),
+		Amount:    mkfloat(p[4:8]),
+		Threshold: mkfloat(p[8:12]),
 	}, nil
 }
 
@@ -93,10 +98,10 @@ func soften(v int, params string) (SoftenParams, error) {
 		return SoftenParams{}, err
 	}
 	return SoftenParams{
-		Size:       math.Float32frombits(binary.LittleEndian.Uint32(p[0:4])),
-		Saturation: math.Float32frombits(binary.LittleEndian.Uint32(p[4:8])),
-		Brightness: math.Float32frombits(binary.LittleEndian.Uint32(p[8:12])),
-		Amount:     math.Float32frombits(binary.LittleEndian.Uint32(p[12:16])),
+		Size:       mkfloat(p[0:4]),
+		Saturation: mkfloat(p[4:8]),
+		Brightness: mkfloat(p[8:12]),
+		Amount:     mkfloat(p[12:16]),
 	}, nil
 }
 
@@ -134,9 +139,9 @@ func bilat(v int, params string) (BilatParams, error) {
 	}
 	b := BilatParams{ // defaults & common fields
 		Mode:    BilatModeBilateral,
-		SigmaR:  math.Float32frombits(binary.LittleEndian.Uint32(p[i : i+4])),
-		SigmaS:  math.Float32frombits(binary.LittleEndian.Uint32(p[i+4 : i+8])),
-		Detail:  math.Float32frombits(binary.LittleEndian.Uint32(p[i+8 : i+12])),
+		SigmaR:  mkfloat(p[i : i+4]),
+		SigmaS:  mkfloat(p[i+4 : i+8]),
+		Detail:  mkfloat(p[i+8 : i+12]),
 		MidTone: 0.2,
 	}
 
@@ -144,7 +149,7 @@ func bilat(v int, params string) (BilatParams, error) {
 		b.Mode = BilatMode(binary.LittleEndian.Uint32(p[0:4]))
 	}
 	if v >= 3 {
-		b.MidTone = math.Float32frombits(binary.LittleEndian.Uint32(p[i+12 : i+16]))
+		b.MidTone = mkfloat(p[i+12 : i+16])
 	}
 
 	return b, nil
@@ -163,9 +168,9 @@ func bloom(v int, params string) (BloomParams, error) {
 	}
 
 	return BloomParams{
-		Size:      math.Float32frombits(binary.LittleEndian.Uint32(p[0:4])),
-		Threshold: math.Float32frombits(binary.LittleEndian.Uint32(p[4:8])),
-		Strength:  math.Float32frombits(binary.LittleEndian.Uint32(p[8:12])),
+		Size:      mkfloat(p[0:4]),
+		Threshold: mkfloat(p[4:8]),
+		Strength:  mkfloat(p[8:12]),
 	}, nil
 }
 
@@ -181,8 +186,8 @@ func clahe(v int, params string) (LCLContrastParams, error) {
 	}
 
 	return LCLContrastParams{
-		Radius: math.Float64frombits(binary.LittleEndian.Uint64(p[0:8])),
-		Slope:  math.Float64frombits(binary.LittleEndian.Uint64(p[8:16])),
+		Radius: mk64f(p[0:8]),
+		Slope:  mk64f(p[8:16]),
 	}, nil
 }
 
@@ -200,9 +205,9 @@ func colisa(v int, params string) (ColisaParams, error) {
 	}
 
 	return ColisaParams{
-		Contrast:   math.Float32frombits(binary.LittleEndian.Uint32(p[0:4])),
-		Brightness: math.Float32frombits(binary.LittleEndian.Uint32(p[4:8])),
-		Saturation: math.Float32frombits(binary.LittleEndian.Uint32(p[8:12])),
+		Contrast:   mkfloat(p[0:4]),
+		Brightness: mkfloat(p[4:8]),
+		Saturation: mkfloat(p[8:12]),
 	}, nil
 }
 
@@ -225,10 +230,10 @@ func colorcontrast(v int, params string) (ColorContrastParams, error) {
 		unbound = true
 	}
 	return ColorContrastParams{
-		SteepA:  math.Float32frombits(binary.LittleEndian.Uint32(p[0:4])),
-		OffsetA: math.Float32frombits(binary.LittleEndian.Uint32(p[4:8])),
-		SteepB:  math.Float32frombits(binary.LittleEndian.Uint32(p[8:12])),
-		OffsetB: math.Float32frombits(binary.LittleEndian.Uint32(p[12:16])),
+		SteepA:  mkfloat(p[0:4]),
+		OffsetA: mkfloat(p[4:8]),
+		SteepB:  mkfloat(p[8:12]),
+		OffsetB: mkfloat(p[12:16]),
 		Unbound: unbound,
 	}, nil
 }
@@ -247,11 +252,11 @@ func colorcorrection(v int, params string) (ColorCorrectionParams, error) {
 		return ColorCorrectionParams{}, err
 	}
 	return ColorCorrectionParams{
-		HiA:        math.Float32frombits(binary.LittleEndian.Uint32(p[0:4])),
-		HiB:        math.Float32frombits(binary.LittleEndian.Uint32(p[4:8])),
-		LowA:       math.Float32frombits(binary.LittleEndian.Uint32(p[8:12])),
-		LowB:       math.Float32frombits(binary.LittleEndian.Uint32(p[12:16])),
-		Saturation: math.Float32frombits(binary.LittleEndian.Uint32(p[16:20])),
+		HiA:        mkfloat(p[0:4]),
+		HiB:        mkfloat(p[4:8]),
+		LowA:       mkfloat(p[8:12]),
+		LowB:       mkfloat(p[12:16]),
+		Saturation: mkfloat(p[16:20]),
 	}, nil
 }
 
@@ -269,10 +274,10 @@ func colorize(v int, params string) (ColorizeParams, error) {
 		return ColorizeParams{}, err
 	}
 	return ColorizeParams{
-		Hue:                math.Float32frombits(binary.LittleEndian.Uint32(p[0:4])),
-		Saturation:         math.Float32frombits(binary.LittleEndian.Uint32(p[4:8])),
-		SourceLightnessMix: math.Float32frombits(binary.LittleEndian.Uint32(p[8:12])),
-		Lightness:          math.Float32frombits(binary.LittleEndian.Uint32(p[12:16])),
+		Hue:                mkfloat(p[0:4]),
+		Saturation:         mkfloat(p[4:8]),
+		SourceLightnessMix: mkfloat(p[8:12]),
+		Lightness:          mkfloat(p[12:16]),
 		Version:            int(binary.LittleEndian.Uint32(p[16:20])),
 	}, nil
 }
@@ -353,7 +358,7 @@ func demosaic(v int, params string) (DemosaicParams, error) {
 
 	return DemosaicParams{
 		GreenEQ:         DemosaicGreenEQ(binary.LittleEndian.Uint32(p[0:4])),
-		MedianThreshold: math.Float32frombits(binary.LittleEndian.Uint32(p[4:8])),
+		MedianThreshold: mkfloat(p[4:8]),
 		ColorSmoothing:  binary.LittleEndian.Uint32(p[8:12]),
 		Method:          DemosaicMethod(binary.LittleEndian.Uint32(p[12:16])),
 		Unused:          binary.LittleEndian.Uint32(p[16:20]),
@@ -423,18 +428,18 @@ func filmic(v int, params string) (FilmicParams, error) {
 
 	f := FilmicParams{
 		FilmicCommonParams: FilmicCommonParams{
-			GreyPtSource:  math.Float32frombits(binary.LittleEndian.Uint32(p[0:4])),
-			BlackPtSource: math.Float32frombits(binary.LittleEndian.Uint32(p[4:8])),
-			WhitePtSource: math.Float32frombits(binary.LittleEndian.Uint32(p[8:12])),
-			Security:      math.Float32frombits(binary.LittleEndian.Uint32(p[12:16])),
-			GreyPtTarget:  math.Float32frombits(binary.LittleEndian.Uint32(p[16:20])),
-			BlackPtTarget: math.Float32frombits(binary.LittleEndian.Uint32(p[20:24])),
-			WhitePtTarget: math.Float32frombits(binary.LittleEndian.Uint32(p[24:28])),
-			Output:        math.Float32frombits(binary.LittleEndian.Uint32(p[28:32])),
-			Latitude:      math.Float32frombits(binary.LittleEndian.Uint32(p[32:36])),
-			Contrast:      math.Float32frombits(binary.LittleEndian.Uint32(p[36:40])),
-			Saturation:    math.Float32frombits(binary.LittleEndian.Uint32(p[40:44])),
-			Balance:       math.Float32frombits(binary.LittleEndian.Uint32(p[i : i+4])),
+			GreyPtSource:  mkfloat(p[0:4]),
+			BlackPtSource: mkfloat(p[4:8]),
+			WhitePtSource: mkfloat(p[8:12]),
+			Security:      mkfloat(p[12:16]),
+			GreyPtTarget:  mkfloat(p[16:20]),
+			BlackPtTarget: mkfloat(p[20:24]),
+			WhitePtTarget: mkfloat(p[24:28]),
+			Output:        mkfloat(p[28:32]),
+			Latitude:      mkfloat(p[32:36]),
+			Contrast:      mkfloat(p[36:40]),
+			Saturation:    mkfloat(p[40:44]),
+			Balance:       mkfloat(p[i : i+4]),
 			PreserveColor: false,
 		},
 		GlobalSaturation: 100, // default for old versions
@@ -442,7 +447,7 @@ func filmic(v int, params string) (FilmicParams, error) {
 	}
 
 	if v > 2 {
-		f.GlobalSaturation = math.Float32frombits(binary.LittleEndian.Uint32(p[44:48]))
+		f.GlobalSaturation = mkfloat(p[44:48])
 	}
 	if v > 1 {
 		f.PreserveColor = binary.LittleEndian.Uint32(p[i+8:i+12]) > 0
@@ -458,18 +463,18 @@ func filmicrgb(v int, params string) (FilmicCommonParams, error) {
 	}
 
 	return FilmicCommonParams{
-		GreyPtSource:  math.Float32frombits(binary.LittleEndian.Uint32(p[0:4])),
-		BlackPtSource: math.Float32frombits(binary.LittleEndian.Uint32(p[4:8])),
-		WhitePtSource: math.Float32frombits(binary.LittleEndian.Uint32(p[8:12])),
-		Security:      math.Float32frombits(binary.LittleEndian.Uint32(p[12:16])),
-		GreyPtTarget:  math.Float32frombits(binary.LittleEndian.Uint32(p[16:20])),
-		BlackPtTarget: math.Float32frombits(binary.LittleEndian.Uint32(p[20:24])),
-		WhitePtTarget: math.Float32frombits(binary.LittleEndian.Uint32(p[24:28])),
-		Output:        math.Float32frombits(binary.LittleEndian.Uint32(p[28:32])),
-		Latitude:      math.Float32frombits(binary.LittleEndian.Uint32(p[32:36])),
-		Contrast:      math.Float32frombits(binary.LittleEndian.Uint32(p[36:40])),
-		Saturation:    math.Float32frombits(binary.LittleEndian.Uint32(p[40:44])),
-		Balance:       math.Float32frombits(binary.LittleEndian.Uint32(p[44:48])),
+		GreyPtSource:  mkfloat(p[0:4]),
+		BlackPtSource: mkfloat(p[4:8]),
+		WhitePtSource: mkfloat(p[8:12]),
+		Security:      mkfloat(p[12:16]),
+		GreyPtTarget:  mkfloat(p[16:20]),
+		BlackPtTarget: mkfloat(p[20:24]),
+		WhitePtTarget: mkfloat(p[24:28]),
+		Output:        mkfloat(p[28:32]),
+		Latitude:      mkfloat(p[32:36]),
+		Contrast:      mkfloat(p[36:40]),
+		Saturation:    mkfloat(p[40:44]),
+		Balance:       mkfloat(p[44:48]),
 		PreserveColor: binary.LittleEndian.Uint32(p[48:52]) > 0,
 	}, nil
 
@@ -487,8 +492,8 @@ func gamma(v int, params string) (GammaParams, error) {
 	}
 
 	return GammaParams{
-		Gamma:  math.Float32frombits(binary.LittleEndian.Uint32(p[0:4])),
-		Linear: math.Float32frombits(binary.LittleEndian.Uint32(p[4:8])),
+		Gamma:  mkfloat(p[0:4]),
+		Linear: mkfloat(p[4:8]),
 	}, nil
 }
 
@@ -507,12 +512,12 @@ func graduatednd(v int, params string) (GraduatedNDparams, error) {
 		return GraduatedNDparams{}, err
 	}
 	return GraduatedNDparams{
-		Density:    math.Float32frombits(binary.LittleEndian.Uint32(p[0:4])),
-		Hardness:   math.Float32frombits(binary.LittleEndian.Uint32(p[4:8])),
-		Rotation:   math.Float32frombits(binary.LittleEndian.Uint32(p[8:12])),
-		Offset:     math.Float32frombits(binary.LittleEndian.Uint32(p[12:16])),
-		Hue:        math.Float32frombits(binary.LittleEndian.Uint32(p[16:20])),
-		Saturation: math.Float32frombits(binary.LittleEndian.Uint32(p[20:24])),
+		Density:    mkfloat(p[0:4]),
+		Hardness:   mkfloat(p[4:8]),
+		Rotation:   mkfloat(p[8:12]),
+		Offset:     mkfloat(p[12:16]),
+		Hue:        mkfloat(p[16:20]),
+		Saturation: mkfloat(p[20:24]),
 	}, nil
 }
 
@@ -554,11 +559,11 @@ func grain(v int, params string) (GrainParam, error) {
 	}
 	g := GrainParam{
 		Channel:  GrainChannel(binary.LittleEndian.Uint32(p[0:4])),
-		Scale:    math.Float32frombits(binary.LittleEndian.Uint32(p[4:8])),
-		Strength: math.Float32frombits(binary.LittleEndian.Uint32(p[8:12])),
+		Scale:    mkfloat(p[4:8]),
+		Strength: mkfloat(p[8:12]),
 	}
 	if v > 1 {
-		g.MidtoneBias = math.Float32frombits(binary.LittleEndian.Uint32(p[12:16]))
+		g.MidtoneBias = mkfloat(p[12:16])
 	}
 	return g, nil
 }
@@ -574,8 +579,8 @@ func hazeremoval(v int, params string) (HazeParams, error) {
 		return HazeParams{}, err
 	}
 	return HazeParams{
-		Strength: math.Float32frombits(binary.LittleEndian.Uint32(p[0:4])),
-		Distance: math.Float32frombits(binary.LittleEndian.Uint32(p[4:8])),
+		Strength: mkfloat(p[0:4]),
+		Distance: mkfloat(p[4:8]),
 	}, nil
 }
 
@@ -618,7 +623,7 @@ func highlights(v int, params string) (HighlightsParams, error) {
 		Clip: 1.0,
 	}
 	if v > 1 {
-		h.Clip = math.Float32frombits(binary.LittleEndian.Uint32(p[16:20]))
+		h.Clip = mkfloat(p[16:20])
 	}
 	return h, nil
 }
@@ -634,8 +639,8 @@ func highpass(v int, params string) (HighPassParams, error) {
 		return HighPassParams{}, err
 	}
 	return HighPassParams{
-		Sharpness: math.Float32frombits(binary.LittleEndian.Uint32(p[0:4])),
-		Contrast:  math.Float32frombits(binary.LittleEndian.Uint32(p[4:8])),
+		Sharpness: mkfloat(p[0:4]),
+		Contrast:  mkfloat(p[4:8]),
 	}, nil
 }
 
@@ -669,14 +674,10 @@ func levels(v int, params string) (LevelsParams, error) {
 	return LevelsParams{
 		Mode: LevelsMode(binary.LittleEndian.Uint32(p[0:4])),
 		Percentiles: [3]float32{
-			math.Float32frombits(binary.LittleEndian.Uint32(p[4:8])),
-			math.Float32frombits(binary.LittleEndian.Uint32(p[8:12])),
-			math.Float32frombits(binary.LittleEndian.Uint32(p[12:16])),
+			mkfloat(p[4:8]), mkfloat(p[8:12]), mkfloat(p[12:16]),
 		},
 		Levels: [3]float32{
-			math.Float32frombits(binary.LittleEndian.Uint32(p[16:20])),
-			math.Float32frombits(binary.LittleEndian.Uint32(p[20:24])),
-			math.Float32frombits(binary.LittleEndian.Uint32(p[24:28])),
+			mkfloat(p[16:20]), mkfloat(p[20:24]), mkfloat(p[24:28]),
 		},
 	}, nil
 }
