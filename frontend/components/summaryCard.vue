@@ -72,7 +72,7 @@
 						<v-btn v-if="edits_open.length" @click="edits_open=[]" icon small title="hide all"><v-icon small>mdi-eye-off</v-icon></v-btn>
 					</v-row>
 					<v-expansion-panels accordion multiple hover v-model="edits_open">
-						<v-expansion-panel v-for="(h,i) in xmp.history" :key="i" :readonly="!h.params">
+						<v-expansion-panel v-for="(h,i) in xmp.history.slice().reverse()" :key="i" :readonly="!h.params">
 							<v-expansion-panel-header class="pa-2" style="min-height: 35px" :hide-actions="!h.params">
 								<!--
 								<template v-slot:actions>
