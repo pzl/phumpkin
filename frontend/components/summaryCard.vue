@@ -128,6 +128,8 @@ import Rating from '~/components/rating'
 import sharpen from '~/components/history/sharpen'
 import colisa from '~/components/history/colisa'
 import vibrance from '~/components/history/vibrance'
+import exposure from '~/components/history/exposure'
+import bilat from '~/components/history/bilat'
 import { parseISO, format } from 'date-fns'
 
 export default {
@@ -264,7 +266,7 @@ export default {
 			})
 		},
 	},
-	components: { Rating, TagCrumbs, sharpen, colisa, vibrance }
+	components: { Rating, TagCrumbs, sharpen, colisa, vibrance, exposure, bilat }
 }
 </script>
 
