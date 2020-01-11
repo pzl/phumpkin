@@ -11,7 +11,7 @@
 			<v-tab style="min-width: 20px" class="pa-0" href="#copy"><v-icon small>mdi-copyright</v-icon></v-tab>
 		</v-tabs>
 
-		<v-card-text>
+		<v-card-text :class="{ 'pa-0': tab === 'edits' }">
 			<v-tabs-items v-model="tab">
 				<v-tab-item value="basic">
 					<div>{{ sizeof }}</div>
@@ -67,25 +67,32 @@
 					<tag-crumbs v-if="xmp.tags && xmp.tags.length" :tags="xmp.tags" />
 				</v-tab-item>
 				<v-tab-item value="edits" v-if="xmp.history && xmp.history.length">
-					<div class="d-flex">
-						<span>History</span>
-						<v-spacer />
-						<v-btn icon x-small @click="show_history = !show_history"><v-icon small>mdi-menu-{{show_history ? 'up' :'down'}}</v-icon></v-btn>
-					</div>
-
-					<v-expand-transition>
-						<div v-if="show_history">
-							<v-list dense>
-								<v-list-item v-for="(h,i) in xmp.history" :key="i" class="pa-0">
-										<v-list-item-title style="flex-grow: 11">{{ h.name }}</v-list-item-title>
-										<v-list-item-subtitle v-if="h.multi_name">{{ h.multi_name }}</v-list-item-subtitle>
-										<v-list-item-icon>
-											<v-icon x-small dense color="grey lighten-1">mdi-radiobox-{{h.enabled ? 'marked' : 'blank' }}</v-icon>
-										</v-list-item-icon>
-								</v-list-item>
-							</v-list>
-						</div>
-					</v-expand-transition>
+					<v-row no-gutters class="pa-2" justify="space-between">
+						<h4>History</h4>
+						<v-btn v-if="edits_open.length" @click="edits_open=[]" icon small title="hide all"><v-icon small>mdi-eye-off</v-icon></v-btn>
+					</v-row>
+					<v-expansion-panels accordion multiple hover v-model="edits_open">
+						<v-expansion-panel v-for="(h,i) in xmp.history" :key="i" :readonly="!h.params">
+							<v-expansion-panel-header class="pa-2" style="min-height: 35px" :hide-actions="!h.params">
+								<!--
+								<template v-slot:actions>
+									<v-btn icon small><v-icon small>mdi-eye-settings-outline</v-icon></v-btn>
+								</template>
+								-->
+								<div class="d-flex">
+									<span :style="{ textDecoration: h.enabled ? 'none' : 'line-through' }">{{ h.name }}</span>
+									<template v-if="h.multi_name">
+										<v-spacer />
+										<span>{{ h.multi_name }}</span>
+									</template>
+								</div>
+							</v-expansion-panel-header>
+							<v-expansion-panel-content class="pt-2">
+								<component v-if="h.op_name in $options.components" :is="h.op_name" v-bind="h.params" :version="h.mod_version" />
+								<pre v-else>{{ JSON.stringify(h.params,null,2) }}</pre>
+							</v-expansion-panel-content>
+						</v-expansion-panel>
+					</v-expansion-panels>
 				</v-tab-item>
 				<v-tab-item value="copy">
 					<div v-if="meta.creator">Creator: {{ meta.creator }}</div>
@@ -118,6 +125,9 @@
 <script>
 import TagCrumbs from '~/components/tagCrumbs'
 import Rating from '~/components/rating'
+import sharpen from '~/components/history/sharpen'
+import colisa from '~/components/history/colisa'
+import vibrance from '~/components/history/vibrance'
 import { parseISO, format } from 'date-fns'
 
 export default {
@@ -134,7 +144,7 @@ export default {
 	data() {
 		return {
 			show_meta: false,
-			show_history: false,
+			edits_open: [],
 			tab: null,
 		}
 	},
@@ -254,7 +264,7 @@ export default {
 			})
 		},
 	},
-	components: { Rating, TagCrumbs }
+	components: { Rating, TagCrumbs, sharpen, colisa, vibrance }
 }
 </script>
 
