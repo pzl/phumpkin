@@ -130,6 +130,8 @@ import colisa from '~/components/history/colisa'
 import vibrance from '~/components/history/vibrance'
 import exposure from '~/components/history/exposure'
 import bilat from '~/components/history/bilat'
+import demosaic from '~/components/history/demosaic'
+import levels from '~/components/history/levels'
 import { parseISO, format } from 'date-fns'
 
 export default {
@@ -266,7 +268,7 @@ export default {
 			})
 		},
 	},
-	components: { Rating, TagCrumbs, sharpen, colisa, vibrance, exposure, bilat }
+	components: { Rating, TagCrumbs, sharpen, colisa, vibrance, exposure, bilat, demosaic, levels }
 }
 </script>
 
