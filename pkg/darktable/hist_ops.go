@@ -939,12 +939,13 @@ func demosaic(v int, params string) (DemosaicParams, error) {
 	}, nil
 }
 
-type Orientation int
+type Orientation int32
 
 // rotations are specified in a clockwise direction
 // https://www.daveperrett.com/articles/2012/07/28/exif-orientation-handling-is-a-ghetto/
 const (
-	OrientationInvalid Orientation = -1
+	OrientationInvalid Orientation = -2
+	OrientAutoDetect   Orientation = -1 // note in photos, -1 is 'invalid'!
 	RotNormal          Orientation = 0
 	MirrorVert         Orientation = 1
 	MirrorHoriz        Orientation = 2
@@ -958,6 +959,10 @@ const (
 func (o Orientation) MarshalJSON() ([]byte, error) { return json.Marshal(o.String()) }
 func (o Orientation) String() string {
 	switch o {
+	case OrientationInvalid:
+		return "invalid"
+	case OrientAutoDetect:
+		return "Auto Detect"
 	case RotNormal:
 		return "Normal"
 	case MirrorVert:
