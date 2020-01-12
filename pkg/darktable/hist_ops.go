@@ -680,30 +680,6 @@ func colorize(v int, params string) (ColorizeParams, error) {
 	}, nil
 }
 
-type DemosaicGreenEQ int
-
-const (
-	DemosaicGreenEQNo DemosaicGreenEQ = iota
-	DemosaicGreenEQLocal
-	DemosaicGreenEQFull
-	DemosaicGreenEQBoth
-)
-
-func (d DemosaicGreenEQ) MarshalJSON() ([]byte, error) { return json.Marshal(d.String()) }
-func (d DemosaicGreenEQ) String() string {
-	switch d {
-	case DemosaicGreenEQNo:
-		return "no"
-	case DemosaicGreenEQLocal:
-		return "local"
-	case DemosaicGreenEQFull:
-		return "full"
-	case DemosaicGreenEQBoth:
-		return "both"
-	}
-	return "unknown"
-}
-
 type CZChannel int
 
 const (
@@ -880,6 +856,30 @@ func defringe(v int, params string) (DefringeParams, error) {
 	}, nil
 }
 
+type DemosaicGreenEQ int
+
+const (
+	DemosaicGreenEQNo DemosaicGreenEQ = iota
+	DemosaicGreenEQLocal
+	DemosaicGreenEQFull
+	DemosaicGreenEQBoth
+)
+
+func (d DemosaicGreenEQ) MarshalJSON() ([]byte, error) { return json.Marshal(d.String()) }
+func (d DemosaicGreenEQ) String() string {
+	switch d {
+	case DemosaicGreenEQNo:
+		return "disabled"
+	case DemosaicGreenEQLocal:
+		return "local average"
+	case DemosaicGreenEQFull:
+		return "full average"
+	case DemosaicGreenEQBoth:
+		return "full and local average"
+	}
+	return "unknown"
+}
+
 type DemosaicMethod int
 
 const (
@@ -919,7 +919,7 @@ func (d DemosaicMethod) String() string {
 type DemosaicParams struct {
 	GreenEQ         DemosaicGreenEQ `json:"green_eq"`
 	MedianThreshold float32         `json:"median_threshold"`
-	ColorSmoothing  uint32          `json:"color_smoothing"`
+	ColorSmoothing  uint32          `json:"color_smoothing"` // "off", "one time", "two times" ... five
 	Method          DemosaicMethod  `json:"method"`
 	Unused          uint32          `json:"-"`
 }
