@@ -132,6 +132,7 @@ import exposure from '~/components/history/exposure'
 import bilat from '~/components/history/bilat'
 import demosaic from '~/components/history/demosaic'
 import levels from '~/components/history/levels'
+import atrous from '~/components/history/atrous'
 import { parseISO, format } from 'date-fns'
 
 export default {
@@ -268,7 +269,7 @@ export default {
 			})
 		},
 	},
-	components: { Rating, TagCrumbs, sharpen, colisa, vibrance, exposure, bilat, demosaic, levels }
+	components: { Rating, TagCrumbs, sharpen, colisa, vibrance, exposure, bilat, demosaic, levels, atrous }
 }
 </script>
 
