@@ -116,7 +116,7 @@ func FriendlyHistoryName(s string) string {
 	case "hazeremoval":
 		return "haze removal"
 	case "highlights":
-		return "hightlight reconstruction"
+		return "highlight reconstruction"
 	case "hotpixels":
 		return "hot pixels"
 	case "lens":
