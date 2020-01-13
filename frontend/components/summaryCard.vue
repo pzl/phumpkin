@@ -137,6 +137,10 @@ import filmic from '~/components/history/filmic'
 import soften from '~/components/history/soften'
 import monochrome from '~/components/history/monochrome'
 import colorcorrection from '~/components/history/colorcorrection'
+import shadhi from '~/components/history/shadhi'
+import colorcontrast from '~/components/history/colorcontrast'
+import velvia from '~/components/history/velvia'
+import highlights from '~/components/history/highlights'
 import { parseISO, format } from 'date-fns'
 
 export default {
@@ -273,7 +277,7 @@ export default {
 			})
 		},
 	},
-	components: { Rating, TagCrumbs, sharpen, colisa, vibrance, exposure, bilat, demosaic, levels, atrous, filmic, soften, monochrome, colorcorrection }
+	components: { Rating, TagCrumbs, sharpen, colisa, vibrance, exposure, bilat, demosaic, levels, atrous, filmic, soften, monochrome, colorcorrection, shadhi, colorcontrast, velvia, highlights }
 }
 </script>
 
