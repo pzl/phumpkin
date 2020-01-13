@@ -80,7 +80,7 @@
 								</template>
 								-->
 								<div class="d-flex">
-									<span :style="{ textDecoration: h.enabled ? 'none' : 'line-through' }">{{ h.name }}</span>
+									<span :title="h.op_name" :style="{ textDecoration: h.enabled ? 'none' : 'line-through' }">{{ h.name }}</span>
 									<template v-if="h.multi_name">
 										<v-spacer />
 										<span>{{ h.multi_name }}</span>
