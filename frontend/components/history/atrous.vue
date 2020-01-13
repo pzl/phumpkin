@@ -3,7 +3,7 @@
 		<div class="eq-graph">
 			<svg viewBox="0 0 100 60">
 				<rect x="0" y="0" width="100" height="60" :fill="fill" />
-				<text x="0" y="6" fill="rgba(255,255,255,0.5)">Luma</text>
+				<text x="0" y="6" :fill="stroke">Luma</text>
 				<text x="30" y="6" fill="rgba(149,96,42,0.8)">Chroma</text>
 				<text x="70" y="6" fill="rgba(40,106,172,0.8)">Edges</text>
 				<path fill="rgba(149,96,42,0.3)" stroke="rgba(149,96,42,0.5)" stroke-width="0.5"
