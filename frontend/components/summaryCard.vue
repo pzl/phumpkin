@@ -134,6 +134,9 @@ import demosaic from '~/components/history/demosaic'
 import levels from '~/components/history/levels'
 import atrous from '~/components/history/atrous'
 import filmic from '~/components/history/filmic'
+import soften from '~/components/history/soften'
+import monochrome from '~/components/history/monochrome'
+import colorcorrection from '~/components/history/colorcorrection'
 import { parseISO, format } from 'date-fns'
 
 export default {
@@ -270,7 +273,7 @@ export default {
 			})
 		},
 	},
-	components: { Rating, TagCrumbs, sharpen, colisa, vibrance, exposure, bilat, demosaic, levels, atrous, filmic }
+	components: { Rating, TagCrumbs, sharpen, colisa, vibrance, exposure, bilat, demosaic, levels, atrous, filmic, soften, monochrome, colorcorrection }
 }
 </script>
 
