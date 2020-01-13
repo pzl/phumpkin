@@ -17,7 +17,6 @@
 </template>
 
 <script>
-import SimpleSliders from '~/components/history/simpleSliders'
 import { line, area, curveNatural } from 'd3-shape'
 
 export default {
@@ -55,7 +54,6 @@ export default {
 		fill() { return this.$vuetify.theme.dark ? "#4c4c4c" : "#ddd" },
 		stroke() { return this.$vuetify.theme.dark ? "#b3b3b3" : "#333" },
 	},
-	components: { SimpleSliders },
 }
 </script>
 
