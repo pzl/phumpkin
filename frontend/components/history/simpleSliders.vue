@@ -8,7 +8,7 @@
 				:min="s.min" :max="s.max" step="0.01"
 				:value="s.value"
 			 />
-			 <span class="caption" style="height: 4px; margin-top: -7px">{{ s.format ? s.format(s.value) : s.value }}</span>
+			 <span :title="s.value" class="caption" style="height: 4px; margin-top: -7px">{{ s.format ? s.format(s.value) : s.value }}</span>
 		</v-row>
 	</v-sheet>
 </template>
