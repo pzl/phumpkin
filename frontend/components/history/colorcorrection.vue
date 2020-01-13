@@ -9,8 +9,12 @@
 					:fill="b.fill"
 					/>
 				<line fill="none" stroke="rgba(170,170,170,1)" :x1="wx" :x2="bx" :y1="wy" :y2="by" />
-				<circle :cx="bx" :cy="by" r="1.3" fill="black" />
-				<circle :cx="wx" :cy="wy" r="1.3" fill="white" />
+				<circle :cx="bx" :cy="by" r="1.3" fill="black">
+					<title>{{ low_a }}, {{ low_b }}</title>
+				</circle>
+				<circle :cx="wx" :cy="wy" r="1.3" fill="white">
+					<title>{{ hi_a }}, {{ hi_b }}</title>
+				</circle>
 			</svg>
 		</div>
 		<simple-sliders :sliders="sliders" />
