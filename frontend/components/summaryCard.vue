@@ -129,6 +129,7 @@ import ashift from '~/components/history/ashift'
 import basecurve from '~/components/history/basecurve'
 import bilateral from '~/components/history/bilateral'
 import cacorrect from '~/components/history/cacorrect'
+import colorchecker from '~/components/history/colorchecker'
 import sharpen from '~/components/history/sharpen'
 import colisa from '~/components/history/colisa'
 import vibrance from '~/components/history/vibrance'
@@ -284,7 +285,7 @@ export default {
 			})
 		},
 	},
-	components: { Rating, TagCrumbs, sharpen, colisa, vibrance, exposure, bilat, demosaic, levels, atrous, filmic, soften, monochrome, colorcorrection, shadhi, colorcontrast, velvia, highlights, lowlight, tonemap, lowpass, ashift, basecurve, bilateral, cacorrect }
+	components: { Rating, TagCrumbs, sharpen, colisa, vibrance, exposure, bilat, demosaic, levels, atrous, filmic, soften, monochrome, colorcorrection, shadhi, colorcontrast, velvia, highlights, lowlight, tonemap, lowpass, ashift, basecurve, bilateral, cacorrect, colorchecker }
 }
 </script>
 

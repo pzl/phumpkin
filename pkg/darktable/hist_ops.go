@@ -56,6 +56,12 @@ type RGB struct {
 	B float32 `json:"b"`
 }
 
+type Lab struct {
+	L float32 `json:"l"`
+	A float32 `json:"a"`
+	B float32 `json:"b"`
+}
+
 // for those that use curve_tools.h values specifically
 type CurveType int
 
@@ -713,6 +719,48 @@ func colorbalance(v int, params string) (ColorBalanceParams, error) {
 		Contrast:      mkfloat(p[56:60]),
 		Grey:          mkfloat(p[60:64]),
 		SaturationOut: mkfloat(p[64:68]),
+	}, nil
+}
+
+type ColorCheckParams struct {
+	Source  [49]Lab `json:"source"`
+	Target  [49]Lab `json:"target"`
+	Patches uint32  `json:"n_patches"`
+}
+
+func colorchecker(v int, params string) (ColorCheckParams, error) {
+	if v < 2 {
+		return ColorCheckParams{}, errors.New("colorchecker v1 not supported")
+	}
+	p, err := decodeParams(params)
+	if err != nil {
+		return ColorCheckParams{}, err
+	}
+
+	const gap = 49 * 4 // distance between one channel and the next
+
+	n := binary.LittleEndian.Uint32(p[6*gap : 6*gap+4])
+
+	var s [49]Lab
+	var t [49]Lab
+
+	for i := 0; i < int(n); i++ {
+		s[i] = Lab{
+			mkfloat(p[i*4 : i*4+4]),
+			mkfloat(p[gap+i*4 : gap+i*4+4]),
+			mkfloat(p[2*gap+i*4 : 2*gap+i*4+4]),
+		}
+		t[i] = Lab{
+			mkfloat(p[3*gap+i*4 : 3*gap+i*4+4]),
+			mkfloat(p[4*gap+i*4 : 4*gap+i*4+4]),
+			mkfloat(p[5*gap+i*4 : 5*gap+i*4+4]),
+		}
+	}
+
+	return ColorCheckParams{
+		Source:  s,
+		Target:  t,
+		Patches: n,
 	}, nil
 }
 

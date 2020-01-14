@@ -195,6 +195,8 @@ func ParseOpParams(name string, v int, params string) (interface{}, error) {
 		return colisa(v, params)
 	case "colorbalance":
 		return colorbalance(v, params)
+	case "colorchecker":
+		return colorchecker(v, params)
 	case "colorcontrast":
 		return colorcontrast(v, params)
 	case "colorcorrection":
