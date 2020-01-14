@@ -143,6 +143,7 @@ import velvia from '~/components/history/velvia'
 import highlights from '~/components/history/highlights'
 import lowlight from '~/components/history/lowlight'
 import tonemap from '~/components/history/tonemap'
+import lowpass from '~/components/history/lowpass'
 import { parseISO, format } from 'date-fns'
 
 export default {
@@ -279,7 +280,7 @@ export default {
 			})
 		},
 	},
-	components: { Rating, TagCrumbs, sharpen, colisa, vibrance, exposure, bilat, demosaic, levels, atrous, filmic, soften, monochrome, colorcorrection, shadhi, colorcontrast, velvia, highlights, lowlight, tonemap }
+	components: { Rating, TagCrumbs, sharpen, colisa, vibrance, exposure, bilat, demosaic, levels, atrous, filmic, soften, monochrome, colorcorrection, shadhi, colorcontrast, velvia, highlights, lowlight, tonemap, lowpass }
 }
 </script>
 
