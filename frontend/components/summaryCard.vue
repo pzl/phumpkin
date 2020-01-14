@@ -88,7 +88,7 @@
 								</div>
 							</v-expansion-panel-header>
 							<v-expansion-panel-content class="pt-2">
-								<component v-if="h.op_name in $options.components" :is="h.op_name" v-bind="h.params" :version="h.mod_version" />
+								<component v-if="h.op_name in $options.components" :is="h.op_name" v-bind="h.params" :version="h.mod_version" :sm="thumbs.small" />
 								<pre v-else>{{ JSON.stringify(h.params,null,2) }}</pre>
 							</v-expansion-panel-content>
 						</v-expansion-panel>
