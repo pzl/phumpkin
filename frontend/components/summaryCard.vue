@@ -125,6 +125,7 @@
 <script>
 import TagCrumbs from '~/components/tagCrumbs'
 import Rating from '~/components/rating'
+import ashift from '~/components/history/ashift'
 import sharpen from '~/components/history/sharpen'
 import colisa from '~/components/history/colisa'
 import vibrance from '~/components/history/vibrance'
@@ -280,7 +281,7 @@ export default {
 			})
 		},
 	},
-	components: { Rating, TagCrumbs, sharpen, colisa, vibrance, exposure, bilat, demosaic, levels, atrous, filmic, soften, monochrome, colorcorrection, shadhi, colorcontrast, velvia, highlights, lowlight, tonemap, lowpass }
+	components: { Rating, TagCrumbs, sharpen, colisa, vibrance, exposure, bilat, demosaic, levels, atrous, filmic, soften, monochrome, colorcorrection, shadhi, colorcontrast, velvia, highlights, lowlight, tonemap, lowpass, ashift }
 }
 </script>
 
