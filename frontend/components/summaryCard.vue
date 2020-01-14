@@ -83,7 +83,7 @@
 									<span :title="h.op_name" :style="{ textDecoration: h.enabled ? 'none' : 'line-through' }">{{ h.name }}</span>
 									<template v-if="h.multi_name">
 										<v-spacer />
-										<span>{{ h.multi_name }}</span>
+										<span class="caption">{{ h.multi_name }}</span>
 									</template>
 								</div>
 							</v-expansion-panel-header>
