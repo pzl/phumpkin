@@ -56,6 +56,28 @@ type RGB struct {
 	B float32 `json:"b"`
 }
 
+// for those that use curve_tools.h values specifically
+type CurveType int
+
+const (
+	CurveCubicSpline CurveType = iota
+	CurveCatmullRom
+	CurveMonotone
+)
+
+func (c CurveType) MarshalJSON() ([]byte, error) { return json.Marshal(c.String()) }
+func (c CurveType) String() string {
+	switch c {
+	case CurveCubicSpline:
+		return "Cubic spline"
+	case CurveCatmullRom:
+		return "Catmull-Rom"
+	case CurveMonotone:
+		return "Monotone Hermite"
+	}
+	return "unknown"
+}
+
 // ----
 
 type AShiftMode int
@@ -225,6 +247,91 @@ func atrous(v int, params string) (AtrousParams, error) {
 	}
 	return a, nil
 
+}
+
+type ColorPreserve int
+
+const (
+	PreserveNone      ColorPreserve = 0
+	PreserveLuminance ColorPreserve = 1
+	PreserveMax       ColorPreserve = 2
+	PreserveAvg       ColorPreserve = 3
+	PreserveSum       ColorPreserve = 4
+	PreserveNorm      ColorPreserve = 5
+	PreservePower     ColorPreserve = 6
+)
+
+func (c ColorPreserve) MarshalJSON() ([]byte, error) { return json.Marshal(c.String()) }
+func (c ColorPreserve) String() string {
+	switch c {
+	case PreserveNone:
+		return "none"
+	case PreserveLuminance:
+		return "luminance"
+	case PreserveMax:
+		return "max RGB"
+	case PreserveAvg:
+		return "average RGB"
+	case PreserveSum:
+		return "sum RGB"
+	case PreserveNorm:
+		return "norm RGB"
+	case PreservePower:
+		return "basic power"
+	}
+	return "unknown"
+}
+
+type BaseCurveParams struct {
+	Curve          [20]Point     `json:"curve"`
+	Nodes          uint32        `json:"n_nodes"`
+	CurveType      CurveType     `json:"curve_type"`
+	ExposureFusion int           `json:"exposure_fusion"`
+	ExposureStops  float32       `json:"exposure_stops"`
+	ExposureBias   float32       `json:"exposure_bias"`
+	PreserveColor  ColorPreserve `json:"preserve_color"`
+}
+
+func basecurve(v int, params string) (BaseCurveParams, error) {
+	if v < 2 {
+		return BaseCurveParams{}, errors.New("basecurve v1 module not supported")
+	}
+	p, err := decodeParams(params)
+	if err != nil {
+		return BaseCurveParams{}, err
+	}
+
+	var curve [20]Point
+	for i := 0; i < 20; i++ {
+		curve[i] = Point{mkfloat(p[i*8 : i*8+4]), mkfloat(p[i*8+4 : i*8+8])}
+	}
+
+	p = p[20*3*8:] // 20 points, 3 curves (reserved space), 8 bytes per pt
+	b := BaseCurveParams{
+		Curve:          curve,
+		Nodes:          binary.LittleEndian.Uint32(p[0:4]),
+		CurveType:      CurveType(binary.LittleEndian.Uint32(p[12:16])), // 2 reserved node counts to skip
+		ExposureFusion: 0,                                               // below are defaults for early versions
+		ExposureStops:  1,
+		ExposureBias:   1,
+		PreserveColor:  PreserveNone,
+	}
+	p = p[24:] // after CurveType, skip next two reserved curve type spaces, 16:20 and 20:24
+
+	if v > 2 {
+		b.ExposureFusion = int(binary.LittleEndian.Uint32(p[0:4]))
+		b.ExposureStops = mkfloat(p[4:8])
+		p = p[8:]
+	}
+	if v > 4 {
+		b.ExposureBias = mkfloat(p[0:4])
+		p = p[4:]
+	}
+	if v > 5 {
+		b.PreserveColor = ColorPreserve(binary.LittleEndian.Uint32(p[0:4]))
+	}
+
+	return b, nil
 }
 
 type ExposureMode int
@@ -701,27 +808,6 @@ func (c CZChannel) String() string {
 	return "unknown"
 }
 
-type CZCurveType int
-
-const (
-	CZCurveCubicSpline CZCurveType = iota
-	CZCurveCatmullRom
-	CZCurveMonotone
-)
-
-func (c CZCurveType) MarshalJSON() ([]byte, error) { return json.Marshal(c.String()) }
-func (c CZCurveType) String() string {
-	switch c {
-	case CZCurveCubicSpline:
-		return "Cubic spline"
-	case CZCurveCatmullRom:
-		return "Catmull-Rom"
-	case CZCurveMonotone:
-		return "Monotone Hermite"
-	}
-	return "unknown"
-}
-
 type CZMode int
 
 const (
@@ -738,12 +824,12 @@ func (c CZMode) String() string {
 }
 
 type ColorZonesParams struct {
-	Channel     CZChannel      `json:"channel"` // selected channel to view by
-	Curve       [3][20]Point   `json:"curve"`   // 3 channels (L,C,h), 20 max points
-	NCurveNodes [3]int32       `json:"n_nodes"` // number of nodes per curve
-	CurveType   [3]CZCurveType `json:"curve_type"`
-	Strength    float32        `json:"strength"` // is this process mode?
-	Mode        CZMode         `json:"mode"`
+	Channel     CZChannel    `json:"channel"` // selected channel to view by
+	Curve       [3][20]Point `json:"curve"`   // 3 channels (L,C,h), 20 max points
+	NCurveNodes [3]int32     `json:"n_nodes"` // number of nodes per curve
+	CurveType   [3]CurveType `json:"curve_type"`
+	Strength    float32      `json:"strength"` // is this process mode?
+	Mode        CZMode       `json:"mode"`
 }
 
 func colorzones(v int, params string) (ColorZonesParams, error) {
@@ -766,7 +852,7 @@ func colorzones(v int, params string) (ColorZonesParams, error) {
 			Channel:     CZChannel(binary.LittleEndian.Uint32(p[0:4])),
 			Strength:    0,
 			NCurveNodes: [3]int32{8, 8, 8},
-			CurveType:   [3]CZCurveType{CZCurveCatmullRom, CZCurveCatmullRom, CZCurveCatmullRom},
+			CurveType:   [3]CurveType{CurveCatmullRom, CurveCatmullRom, CurveCatmullRom},
 			Mode:        CZModeOld,
 		}
 		if v > 2 {
@@ -795,10 +881,10 @@ func colorzones(v int, params string) (ColorZonesParams, error) {
 			int32(binary.LittleEndian.Uint32(p[curvegap+4 : curvegap+8])),
 			int32(binary.LittleEndian.Uint32(p[curvegap+8 : curvegap+12])),
 		},
-		CurveType: [3]CZCurveType{
-			CZCurveType(binary.LittleEndian.Uint32(p[curvegap+12 : curvegap+16])),
-			CZCurveType(binary.LittleEndian.Uint32(p[curvegap+16 : curvegap+20])),
-			CZCurveType(binary.LittleEndian.Uint32(p[curvegap+20 : curvegap+24])),
+		CurveType: [3]CurveType{
+			CurveType(binary.LittleEndian.Uint32(p[curvegap+12 : curvegap+16])),
+			CurveType(binary.LittleEndian.Uint32(p[curvegap+16 : curvegap+20])),
+			CurveType(binary.LittleEndian.Uint32(p[curvegap+20 : curvegap+24])),
 		},
 		Strength: mkfloat(p[curvegap+24 : curvegap+28]),
 		Mode:     CZMode(binary.LittleEndian.Uint32(p[curvegap+28 : curvegap+32])),
@@ -991,6 +1077,7 @@ func flip(v int, params string) (Orientation, error) {
 	return Orientation(binary.LittleEndian.Uint32(p[0:4])), nil
 }
 
+// does not use CurveType, as it adds 'optimized'
 type FilmicInterpolator int
 
 const (

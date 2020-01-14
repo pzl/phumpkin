@@ -175,6 +175,8 @@ func ParseOpParams(name string, v int, params string) (interface{}, error) {
 		return ashift(v, params)
 	case "atrous":
 		return atrous(v, params)
+	case "basecurve":
+		return basecurve(v, params)
 	case "bilat":
 		return bilat(v, params)
 	case "bilateral":
