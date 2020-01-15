@@ -894,7 +894,7 @@ func colorzones(v int, params string) (ColorZonesParams, error) {
 		// X [3][8]float32
 		// Y [3][8]float32
 
-		const curvegap = 3 * 8 * 4 * 2 // two [3][8]float32 are the curves here
+		const curvegap = 3*8*4*2 + 4 // two [3][8]float32 are the curves here
 
 		c := ColorZonesParams{
 			Channel:     CZChannel(binary.LittleEndian.Uint32(p[0:4])),
@@ -921,7 +921,7 @@ func colorzones(v int, params string) (ColorZonesParams, error) {
 		return c, nil
 	}
 
-	const curvegap = 3 * 20 * 4
+	const curvegap = 3*20*8 + 4
 	c := ColorZonesParams{
 		Channel: CZChannel(binary.LittleEndian.Uint32(p[0:4])),
 		NCurveNodes: [3]int32{
@@ -941,7 +941,7 @@ func colorzones(v int, params string) (ColorZonesParams, error) {
 	p = p[4:] // shift out the Channel offset
 	const row = 20 * 8
 	for i := 0; i < 3; i++ {
-		for j := 0; j < 20; j++ {
+		for j := 0; j < int(c.NCurveNodes[i]); j++ {
 			c.Curve[i][j] = Point{
 				mkfloat(p[i*row+j*8 : i*row+j*8+4]), mkfloat(p[i*row+j*8+4 : i*row+j*8+8]),
 			}

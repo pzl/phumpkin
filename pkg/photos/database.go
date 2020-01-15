@@ -142,7 +142,7 @@ func writeXMPBatch(log logrus.FieldLogger, batch *badger.WriteBatch, file string
 	}
 	d, t, err := marshalForWrite(x)
 	if err != nil {
-		log.WithError(err).Error("unable to prep XMP for write. Not writing to batch")
+		log.WithField("x", fmt.Sprintf("%#v", x)).WithError(err).Error("unable to prep XMP for write. Not writing to batch")
 		return
 	}
 
