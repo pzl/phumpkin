@@ -62,6 +62,10 @@ buildah run -- $c apk add --no-cache exiftool
 echo "[i] installing vips"
 buildah run -- $c apk add --no-cache vips-dev
 
+echo "[i] getting most recent lensdb lenses"
+mkdir -p $cmt/var/lib/lensfun-updates/version_1
+curl -s https://wilson.bronger.org/lensfun-db/version_1.tar.bz2 | tar -xj -C $cmt/var/lib/lensfun-updates/version_1
+
 
 echo "[i] setting app container configs"
 buildah config --label name=phumpkin $c
