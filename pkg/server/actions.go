@@ -211,6 +211,10 @@ func (a Action) GetSize(ctx context.Context, sr SizeReq) (string, error) {
 			// small-or-above request, resize using darktable
 
 			// if using raw file, use XMP as a parameter
+			if _, err := os.Stat(src + ".xmp"); err == nil {
+				xmp = src + ".xmp"
+			}
+
 			opts := make([]resize.JobOpt, 0, 1)
 			if src == filepath {
 				opts = append(opts, resize.SetXMP(xmp))
