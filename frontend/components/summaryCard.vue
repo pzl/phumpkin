@@ -130,6 +130,7 @@ import basecurve from '~/components/history/basecurve'
 import bilateral from '~/components/history/bilateral'
 import bloom from '~/components/history/bloom'
 import cacorrect from '~/components/history/cacorrect'
+import channelmixer from '~/components/history/channelmixer'
 import colorchecker from '~/components/history/colorchecker'
 import colorzones from '~/components/history/colorzones'
 import sharpen from '~/components/history/sharpen'
@@ -291,6 +292,7 @@ export default {
 		Rating,
 		TagCrumbs,
 		bloom,
+		channelmixer,
 		sharpen,
 		colisa,
 		vibrance,
