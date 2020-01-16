@@ -66,7 +66,7 @@ export default {
 	},
 	methods: {
 		drawBG() {
-			const norm_c = 128 + Math.sqrt(2)
+			const norm_c = 128 * Math.sqrt(2)
 			const sample_color = lch(rgb(0,77,179))
 
 			// set x-axis scale ranges based on operating channel
