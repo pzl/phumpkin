@@ -16,6 +16,14 @@ import (
 
 func mkfloat(p []byte) float32 { return math.Float32frombits(binary.LittleEndian.Uint32(p)) }
 func mk64f(p []byte) float64   { return math.Float64frombits(binary.LittleEndian.Uint64(p)) }
+func mkstring(p []byte) string {
+	for i := 0; i < len(p); i++ {
+		if p[i] == 0 {
+			return string(p[:i])
+		}
+	}
+	return string(p)
+}
 
 // turns XMP param string into binary bytes. Detects b64 & compression vs hex
 func decodeParams(params string) ([]byte, error) {
@@ -1429,6 +1437,114 @@ func invert(v int, params string) (InvertParams, error) {
 	}
 
 	return i, nil
+}
+
+/*
+  LENSFUN_MODFLAG_NONE = 0,
+  LENSFUN_MODFLAG_ALL = LF_MODIFY_DISTORTION | LF_MODIFY_TCA | LF_MODIFY_VIGNETTING,
+  LENSFUN_MODFLAG_DIST_TCA = LF_MODIFY_DISTORTION | LF_MODIFY_TCA,
+  LENSFUN_MODFLAG_DIST_VIGN = LF_MODIFY_DISTORTION | LF_MODIFY_VIGNETTING,
+  LENSFUN_MODFLAG_TCA_VIGN = LF_MODIFY_TCA | LF_MODIFY_VIGNETTING,
+  LENSFUN_MODFLAG_DIST = LF_MODIFY_DISTORTION,
+  LENSFUN_MODFLAG_TCA = LF_MODIFY_TCA,
+  LENSFUN_MODFLAG_VIGN = LF_MODIFY_VIGNETTING,
+*/
+
+type LensType int
+
+const (
+	LensUnknown LensType = iota
+	LensRectilinear
+	LensFisheye
+	LensPanoramic
+	LensEquirect
+	LensFishOrtho
+	LensFishStereo
+	LensFishEquiSolid
+	LensFishThoby
+)
+
+func (l LensType) MarshalJSON() ([]byte, error) { return json.Marshal(l.String()) }
+func (l LensType) String() string {
+	switch l {
+	case LensUnknown:
+		return "unknown"
+	case LensRectilinear:
+		return "rectilinear"
+	case LensFisheye:
+		return "fisheye"
+	case LensPanoramic:
+		return "panoramic"
+	case LensEquirect:
+		return "equirectangular"
+	case LensFishOrtho:
+		return "fisheye orthographic"
+	case LensFishStereo:
+		return "fisheye stereographic"
+	case LensFishEquiSolid:
+		return "fisheye equisolid"
+	case LensFishThoby:
+		return "fisheye Thoby"
+	}
+	return "invalid"
+}
+
+type LensParams struct {
+	Corrections int      `json:"corrections"`
+	Inverse     int      `json:"inverse"`
+	Scale       float32  `json:"scale"`
+	Crop        float32  `json:"crop"`
+	Focal       float32  `json:"focal"`
+	Aperture    float32  `json:"aperture"`
+	Distance    float32  `json:"distance"`
+	TargetGeo   LensType `json:"target_geo"`
+	Camera      string   `json:"camera"`
+	Lens        string   `json:"lens"`
+	TCAOverride int      `json:"tca_override"`
+	TCAR        float32  `json:"tca_r"`
+	TCAB        float32  `json:"tca_b"`
+	Modified    bool     `json:"modified"`
+}
+
+func lens(v int, params string) (LensParams, error) {
+	if v < 2 {
+		return LensParams{}, errors.New("lens v1 not supported")
+	}
+	p, err := decodeParams(params)
+	if err != nil {
+		return LensParams{}, err
+	}
+
+	strlen := 128
+	if v == 2 {
+		strlen = 52
+	}
+
+	l := LensParams{
+		Corrections: int(binary.LittleEndian.Uint32(p[0:4])),
+		Inverse:     int(binary.LittleEndian.Uint32(p[4:8])),
+		Scale:       mkfloat(p[8:12]),
+		Crop:        mkfloat(p[12:16]),
+		Focal:       mkfloat(p[16:20]),
+		Aperture:    mkfloat(p[20:24]),
+		Distance:    mkfloat(p[24:28]),
+		TargetGeo:   LensType(binary.LittleEndian.Uint32(p[28:32])),
+		Camera:      mkstring(p[32 : 32+strlen]),
+		Lens:        mkstring(p[32+strlen : 32+2*strlen]),
+		TCAOverride: int(binary.LittleEndian.Uint32(p[32+2*strlen : 36+2*strlen])),
+		TCAR:        mkfloat(p[36+2*strlen : 40+2*strlen]),
+		TCAB:        mkfloat(p[40+2*strlen : 44+2*strlen]),
+		Modified:    true,
+	}
+
+	if v > 3 {
+		l.Modified = binary.LittleEndian.Uint32(p[44+2*strlen:48+2*strlen]) != 0
+	}
+	if v < 5 {
+		l.TCAR, l.TCAB = l.TCAB, l.TCAR
+	}
+
+	return l, nil
 }
 
 type LevelsMode int

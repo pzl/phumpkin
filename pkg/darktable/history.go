@@ -231,6 +231,8 @@ func ParseOpParams(name string, v int, params string) (interface{}, error) {
 		return highpass(v, params)
 	case "invert":
 		return invert(v, params)
+	case "lens":
+		return lens(v, params)
 	case "levels":
 		return levels(v, params)
 	case "lowlight":
