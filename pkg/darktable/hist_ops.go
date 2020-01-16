@@ -859,16 +859,16 @@ func (c CZChannel) String() string {
 type CZMode int
 
 const (
-	CZModeOld CZMode = iota
-	CZModeNew
+	CZModeSmooth CZMode = iota
+	CZModeStrong
 )
 
 func (c CZMode) MarshalJSON() ([]byte, error) { return json.Marshal(c.String()) }
 func (c CZMode) String() string {
-	if c == CZModeOld {
-		return "old"
+	if c == CZModeSmooth {
+		return "smooth"
 	}
-	return "new"
+	return "strong"
 }
 
 type ColorZonesParams struct {
@@ -901,7 +901,7 @@ func colorzones(v int, params string) (ColorZonesParams, error) {
 			Strength:    0,
 			NCurveNodes: [3]int32{8, 8, 8},
 			CurveType:   [3]CurveType{CurveCatmullRom, CurveCatmullRom, CurveCatmullRom},
-			Mode:        CZModeOld,
+			Mode:        CZModeSmooth,
 		}
 		if v > 2 {
 			c.Strength = mkfloat(p[curvegap : curvegap+4])
