@@ -6,7 +6,13 @@
 		<v-navigation-drawer app v-model="nav_vis">
 			<v-list-item>
 				<v-list-item-content>
-					<v-list-item-title class="title">Discover</v-list-item-title>
+					<v-list-item-title class="title d-flex">
+						<span>Discover</span>
+						<v-spacer />
+						<v-btn @click="nav_vis = false" icon class="d-block d-sm-none">
+							<v-icon>mdi-close</v-icon>
+						</v-btn>
+					</v-list-item-title>
 					<v-list-item-subtitle>Find and Filter photos</v-list-item-subtitle>
 				</v-list-item-content>
 			</v-list-item>
@@ -67,17 +73,19 @@
 			<v-btn icon v-if="!connected" class="red--text" @click="reconnect">
 				<v-icon small>mdi-lan-disconnect</v-icon>
 			</v-btn>
-			<span>{{display_scale}}</span>
+			<!--<span>{{display_scale}}</span>-->
 			<v-spacer />
 			<template v-if="anySelected">
 				<v-btn icon @click="clearSelection">
 					<v-icon>mdi-close</v-icon>
 				</v-btn>
+				<!--
 				<template v-if="selected.length === 1">
 					<v-btn icon>
 						<v-icon>mdi-information</v-icon>
 					</v-btn>
 				</template>
+				-->
 				<v-btn icon @click="view">
 					<v-icon>mdi-eye</v-icon>
 				</v-btn>

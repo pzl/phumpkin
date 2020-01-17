@@ -1,5 +1,5 @@
 <template>
-	<v-container fluid class="d-flex flex-column">
+	<v-container fluid class="d-flex flex-column pa-0">
 		<v-row>
 			<path-crumbs />
 		</v-row>
