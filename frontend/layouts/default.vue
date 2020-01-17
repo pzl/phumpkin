@@ -281,6 +281,11 @@ export default {
 				this.size_menu.show = true
 			})
 		},
+		clickOverlay(e) {
+			if (e.target.classList.contains('v-overlay__scrim')) { // clicked off content
+				this.lightbox = false
+			}
+		},
 		keyHandler(ev) {
 			if (!this.lightbox) {
 				switch (ev.keyCode) {
@@ -317,6 +322,13 @@ export default {
 				this.toast.style = "error"
 			}
 		},
+		lightbox(shown) {
+			if (shown) {
+				document.addEventListener('mousedown', this.clickOverlay)
+			} else {
+				document.removeEventListener('mousedown', this.clickOverlay)
+			}
+		}
 	},
 	mounted() {
 		window.addEventListener('keydown', this.keyHandler)
