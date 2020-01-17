@@ -8,7 +8,6 @@
 				:src="src"
 				:lazy-src="thumbs['x-small'].url + '?purpose=lazysrc'"
 				:aspect-ratio="thumbs['large'].width/thumbs['large'].height"
-				:height="height"
 				:width="width"
 				max-width="100%"
 				contain
