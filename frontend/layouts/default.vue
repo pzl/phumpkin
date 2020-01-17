@@ -79,23 +79,23 @@
 				<v-btn icon @click="clearSelection">
 					<v-icon>mdi-close</v-icon>
 				</v-btn>
-				<!--
-				<template v-if="selected.length === 1">
-					<v-btn icon>
-						<v-icon>mdi-information</v-icon>
-					</v-btn>
-				</template>
-				-->
 				<v-btn icon @click="view">
 					<v-icon>mdi-eye</v-icon>
 				</v-btn>
-				<v-btn icon disabled>
-					<v-icon>mdi-download</v-icon>
-				</v-btn>
+				<template v-if="selected.length === 1">
+					<!--
+					<v-btn icon>
+						<v-icon>mdi-information</v-icon>
+					</v-btn>
+					-->
+					<v-btn icon :href="selected_image[0].original.url">
+						<v-icon>mdi-download</v-icon>
+					</v-btn>
+					<v-btn icon @click="showSizeMenu">
+						<v-icon>mdi-dots-vertical</v-icon>
+					</v-btn>
+				</template>
 				<size-select :x="size_menu.x" :y="size_menu.y" v-model="size_menu.show" :thumbs="selected_image.map(x=>x.thumbs)" />
-				<v-btn icon @click="showSizeMenu">
-					<v-icon>mdi-dots-vertical</v-icon>
-				</v-btn>
 				<v-spacer />
 			</template>
 			<v-btn icon v-if="navCollapsed">
