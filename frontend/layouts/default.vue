@@ -84,7 +84,8 @@
 				<v-btn icon disabled>
 					<v-icon>mdi-download</v-icon>
 				</v-btn>
-				<v-btn icon disabled>
+				<size-select :x="size_menu.x" :y="size_menu.y" v-model="size_menu.show" :thumbs="selected_image.map(x=>x.thumbs)" />
+				<v-btn icon @click="showSizeMenu">
 					<v-icon>mdi-dots-vertical</v-icon>
 				</v-btn>
 				<v-spacer />
@@ -176,6 +177,7 @@ import scrollUp from '~/components/scrollUp'
 import Rating from '~/components/rating'
 import Tags from '~/components/tags'
 import SummaryCard from '~/components/summaryCard'
+import SizeSelect from '~/components/sizeSelect'
 import { mapState, mapMutations, mapActions } from 'vuex'
 
 export default {
@@ -218,6 +220,11 @@ export default {
 			},
 			lightbox: false,
 			lightbox_position: 0,
+			size_menu: {
+				show: false,
+				x: 0,
+				y: 0,
+			}
 		}
 	},
 	computed: {
@@ -255,6 +262,16 @@ export default {
 		flipSortDir() {
 			this.sortDir(!this.sort_asc)
 			this.resetImages()
+		},
+		showSizeMenu(e) {
+			e.preventDefault()
+
+			this.size_menu.show = false
+			this.size_menu.x = e.clientX
+			this.size_menu.y = e.clientY
+			this.$nextTick(() => {
+				this.size_menu.show = true
+			})
 		},
 		keyHandler(ev) {
 			if (!this.lightbox) {
@@ -299,7 +316,7 @@ export default {
 	destroyed() {
 		window.removeEventListener('keydown', this.keyHandler)
 	},
-	components: { scrollUp, Rating, Tags, SummaryCard }
+	components: { scrollUp, Rating, Tags, SummaryCard, SizeSelect }
 }
 </script>
 

@@ -34,16 +34,7 @@
 
 			<v-icon v-if="isSelected" class="select-check" color="success" large>mdi-checkbox-marked-circle-outline</v-icon>
 
-			<v-menu v-model="menu" :position-x="menu_x" :position-y="menu_y" absolute offset-y >
-				<v-list>
-					<v-list-item v-for="(s,i) in sizes" :key="i" :href="s.url" target="_blank" two-line dense>
-						<v-list-item-content>
-							<v-list-item-title>{{ s.name }}</v-list-item-title>
-							<v-list-item-subtitle>{{ s.width }}x{{ s.height }}</v-list-item-subtitle>
-						</v-list-item-content>
-					</v-list-item>
-				</v-list>
-			</v-menu>
+			<size-select :x="menu_x" :y="menu_y" :thumbs="thumbs" v-model="menu" />
 
 			<v-expand-transition v-if="scale > 0.18">
 				<v-container v-if="hover" class="transition-fast-in-fast-out black darken-2 v-card--reveal white--text hidden-sm-and-down" fluid>
@@ -76,6 +67,7 @@
 <script>
 import Rating from '~/components/rating'
 import Tags from '~/components/tags'
+import SizeSelect from '~/components/sizeSelect'
 import { mapState, mapMutations, mapActions } from 'vuex'
 
 export default {
@@ -124,14 +116,6 @@ export default {
 			}
 			return this.thumbs[s].url
 		},
-		sizes() {
-			return Object.keys(this.thumbs).map(s => {
-				return {
-					name: s,
-					...this.thumbs[s]
-				}
-			}).sort((a,b) => a.width - b.width)
-		},
 		scale() {
 			return parseFloat(this.display_scale)
 		},
@@ -178,7 +162,7 @@ export default {
 		},
 		...mapMutations('images', ['rate']),
 	},
-	components: { Rating, Tags },
+	components: { Rating, Tags, SizeSelect },
 }
 </script>
 
