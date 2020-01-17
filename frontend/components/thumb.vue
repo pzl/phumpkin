@@ -29,6 +29,7 @@
 						</v-lazy>
 					</v-row>
 				</template>
+				<img-overlay :width="width" :height="height" :exif="exif" />
 			</v-img>
 
 			<v-icon v-if="isSelected" class="select-check" color="success" large>mdi-checkbox-marked-circle-outline</v-icon>
@@ -67,6 +68,7 @@
 import Rating from '~/components/rating'
 import Tags from '~/components/tags'
 import SizeSelect from '~/components/sizeSelect'
+import ImgOverlay from '~/components/imgOverlay'
 import { mapState, mapMutations, mapActions } from 'vuex'
 
 export default {
@@ -161,7 +163,7 @@ export default {
 		},
 		...mapMutations('images', ['rate']),
 	},
-	components: { Rating, Tags, SizeSelect },
+	components: { Rating, Tags, SizeSelect, ImgOverlay },
 }
 </script>
 
@@ -173,5 +175,9 @@ export default {
 	background: rgba(255,255,255,0.2);
 	box-shadow: 0 0 2px 0 rgba(255,255,255,0.6);
 	border-radius: 50% !important;
+}
+
+.thumb-card {
+	position: relative;
 }
 </style>
