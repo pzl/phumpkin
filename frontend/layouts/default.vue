@@ -69,7 +69,7 @@
 			<v-app-bar-nav-icon @click.stop="nav_vis = !nav_vis">
 				<v-icon>mdi-chevron-{{ nav_vis ? 'left' : 'right' }}</v-icon>
 			</v-app-bar-nav-icon>
-			<v-toolbar-title>{{ anySelected ? `${selected.length} Selected` : 'Phumpkin' }}</v-toolbar-title>
+			<v-toolbar-title class="d-none d-md-block" >{{ anySelected ? `${selected.length} Selected` : 'Phumpkin' }}</v-toolbar-title>
 			<v-btn icon v-if="!connected" class="red--text" @click="reconnect">
 				<v-icon small>mdi-lan-disconnect</v-icon>
 			</v-btn>
@@ -103,7 +103,7 @@
 			</v-btn>
 			<v-menu offset-y open-on-hover close-delay="300" :close-on-content-click="false">
 				<template v-slot:activator="{ on }">
-					<v-btn icon v-on="on" title="View Size">
+					<v-btn class="d-none d-md-block" icon v-on="on" title="View Size">
 						<v-icon>mdi-apps</v-icon>
 					</v-btn>
 				</template>
@@ -131,6 +131,7 @@
 			<v-btn icon @click="flipSortDir" small title="Sort Direction">
 				<v-icon>mdi-sort-{{ sort_asc ? 'a' : 'de' }}scending</v-icon>
 			</v-btn>
+			<!--
 			<v-btn icon title="Filter" disabled>
 				<v-icon>mdi-filter</v-icon>
 			</v-btn>
@@ -145,8 +146,9 @@
 			<v-btn icon title="Upload" disabled>
 				<v-icon>mdi-upload</v-icon>
 			</v-btn>
+			-->
 			<div>
-				<v-switch label="Dark Mode" v-model="darkness" hide-details />
+				<v-switch :label="$vuetify.breakpoint.mdAndUp ? 'Dark Mode' : null" v-model="darkness" hide-details />
 			</div>
 		</v-app-bar>
 

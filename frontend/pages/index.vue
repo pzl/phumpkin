@@ -1,12 +1,12 @@
 <template>
 	<v-container fluid class="d-flex flex-column pa-0">
-		<v-row>
+		<v-row class="content-group">
 			<path-crumbs />
 		</v-row>
-		<v-row>
+		<v-row class="content-group">
 			<directory v-for="(d,i) in dirs" :key="d+i" :name="d" @click="onDirClick(d, $event)" />
 		</v-row>
-		<v-row justify="space-between" align="start" style="max-width: 100%">
+		<v-row class="content-group" justify="space-between" align="start">
 			<thumb
 				v-for="(img, i) in images" :key="i"
 				v-bind="img"
@@ -119,4 +119,8 @@ export default {
   user-select: none; /* prevent name highlighting on shift-click */
 }
 
+
+.content-group {
+	max-width: 100%;
+}
 </style>
