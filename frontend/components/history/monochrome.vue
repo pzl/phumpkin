@@ -8,7 +8,7 @@
 					:x="b.x" :y="b.y"
 					:fill="b.fill"
 					/>
-				<circle :cx="boxsize/2" :cy="boxsize/2" :r="boxsize*0.22*size" fill="none" stroke="rgba(255,255,255,0.4)" stroke-width="1" />
+				<circle :cx="cx" :cy="cy" :r="boxsize*0.22*size" fill="none" stroke="rgba(255,255,255,0.4)" stroke-width="1" />
 			</svg>
 		</div>
 		<simple-sliders :sliders="sliders" />
@@ -20,6 +20,7 @@ import { lab } from 'd3-color'
 import SimpleSliders from '~/components/history/simpleSliders'
 
 const nBoxes = 8
+const square_size = 13
 
 export default {
 	props: {
@@ -34,7 +35,8 @@ export default {
 			sliders: [
 				{title: "hi", value: this.highlights, min: 0, max: 1, format: v => v.toFixed(2)},
 			],
-			square_size: 13, // px
+			square_size: square_size,
+			boxsize: square_size * nBoxes,
 		}
 	},
 	methods: {
@@ -46,8 +48,11 @@ export default {
 		}
 	},
 	computed: {
-		boxsize() {
-			return this.square_size*nBoxes
+		cx() {
+			return this.a/256.0 * this.boxsize + this.boxsize/2.0
+		},
+		cy() {
+			return this.boxsize - (this.b/256.0 * this.boxsize + this.boxsize/2.0)
 		},
 		blocks() {
 			const blocks = []
@@ -61,8 +66,8 @@ export default {
 					l *= f*f;
 					const c = lab(l,a,b)
 					blocks.push({
-						x: i*this.square_size,
-						y: (this.boxsize-this.square_size) - j*this.square_size, // invert Y
+						x: i*square_size,
+						y: (this.boxsize-square_size) - j*square_size, // invert Y
 						fill: c.toString(),
 					})
 				}
