@@ -198,9 +198,6 @@
 
 		<v-snackbar :value="toast.show" :color="toast.style">{{ toast.message }} <v-btn dark text @click="toast.show = false">Close</v-btn></v-snackbar>
 
-		<v-bottom-navigation class="hidden-md-and-up" app>
-		</v-bottom-navigation>
-
 		<v-footer class="d-flex justify-space-between" app>
 			<span>Phumpkin</span>
 			<span class="copy">v. {{ version }} &copy; {{ new Date().getFullYear() }}</span>
