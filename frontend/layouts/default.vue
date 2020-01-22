@@ -98,9 +98,35 @@
 				<size-select :x="size_menu.x" :y="size_menu.y" v-model="size_menu.show" :thumbs="selected_image.map(x=>x.thumbs)" />
 				<v-spacer />
 			</template>
+			<!--
 			<v-btn icon v-if="navCollapsed">
 				<v-icon>mdi-tools</v-icon>
 			</v-btn>
+			-->
+			<v-menu offset-y close-delay="300" :close-on-content-click="false">
+				<template v-slot:activator="{ on }">
+					<v-btn class="d-none d-md-block" icon v-on="on" title="Layers">
+						<v-icon>mdi-layers-outline</v-icon>
+					</v-btn>
+				</template>
+				<v-list dense>
+					<v-list-item-group multiple :value="active_layers" @change="setActiveLayers">
+						<v-list-item v-for="(item,i) in layers" :key="'layer'+i" :value="item.text">
+							<template v-slot:default="{active,toggle}">
+								<v-list-item-icon>
+									<v-icon :color="active ? item.color : undefined">{{ item.icon }}</v-icon>
+								</v-list-item-icon>
+								<v-list-item-content>
+									<v-list-item-title>{{ item.text }}</v-list-item-title>
+								</v-list-item-content>
+								<v-list-item-action>
+									<v-checkbox :color="active ? item.color : undefined" dense :input-value="active" @click="toggle" />
+								</v-list-item-action>
+							</template>
+						</v-list-item>
+					</v-list-item-group>
+				</v-list>
+			</v-menu>
 			<v-menu offset-y open-on-hover close-delay="300" :close-on-content-click="false">
 				<template v-slot:activator="{ on }">
 					<v-btn class="d-none d-md-block" icon v-on="on" title="View Size">
@@ -205,16 +231,6 @@ export default {
 			],
 			toolbar_vis: null,
 			toolbar_shrunk: true,
-			view_sizes: [
-				{size: 'auto', icon: 'mdi-collage' },
-				{size: 'x-small', icon: 'mdi-drag-horizontal' },
-				{size: 'small', icon: 'mdi-view-comfy' },
-				{size: 'medium', icon: 'mdi-view-module' },
-				{size: 'medium-pad', icon: 'mdi-apps' },
-				{size: 'large', icon: 'mdi-view-grid-outline' },
-				{size: 'x-large', icon: 'mdi-view-grid' },
-				{size: 'single', icon: 'mdi-selection' },
-			],
 			sortables: [
 				{ text: 'Rating', icon: 'mdi-star-half' },
 				{ text: 'Date Taken', icon: 'mdi-calendar-clock' },
@@ -234,7 +250,7 @@ export default {
 				show: false,
 				x: 0,
 				y: 0,
-			}
+			},
 		}
 	},
 	computed: {
@@ -246,7 +262,7 @@ export default {
 		bg() { return (this.$vuetify.theme.dark) ? '#424242' : '#fafafa' },
 		...mapState('images', ['images','selected','sort','sort_asc']),
 		...mapState('socket',['connected']),
-		...mapState('interface', ['display_scale']),
+		...mapState('interface', ['display_scale', 'layers', 'active_layers']),
 	},
 	methods: {
 		onScroll() {
@@ -312,7 +328,7 @@ export default {
 			}
 		},
 		...mapMutations('images', ['clearSelection', 'sortBy', 'sortDir']),
-		...mapMutations('interface', ['scale']),
+		...mapMutations('interface', ['scale', 'setActiveLayers']),
 		...mapActions('images', ['resetImages'])
 	},
 	watch: {
