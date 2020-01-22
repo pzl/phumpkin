@@ -3,6 +3,8 @@
 </template>
 
 <script>
+import { mapState } from 'vuex'
+
 
 function align(x) { return ~~(x)+0.5 }
 
@@ -85,26 +87,29 @@ export default {
 				return 0
 			}
 			return parseInt(this.exif.FocalPlaneAFPointsUsed)
-		}
+		},
+		...mapState('interface', ['active_layers'])
 	},
 	methods: {
 		draw() {
 			this.ctx.clearRect(0,0,this.exif.ImageWidth, this.exif.ImageHeight)
 
 			// focus plane dots (often a grid)
-			if (this.n_focal_plane > 0) {
+			if (this.active_layers.indexOf('Focus Plane') !== -1 && this.n_focal_plane > 0) {
 				this.draw_focal_plane()
 			}
 
-			if (this.nfaces > 0) {
+			if (this.active_layers.indexOf('Faces') !== -1 && this.nfaces > 0) {
 				this.drawFaces()
 			}
 
-			this.draw_af()
+			if (this.active_layers.indexOf('AF Intent') !== -1) {
+				this.draw_af()
+			}
 
 			// what ended up being the focal point, after any recomposing?
 			const foc = this.focus_location
-			if (foc !== null) {
+			if (this.active_layers.indexOf('Focus Point') !== -1 && foc !== null) {
 				this.ctx.strokeStyle = "#ff0000"
 				this.ctx.strokeRect(foc[0], foc[1], foc[2], foc[3])
 			}
@@ -238,7 +243,7 @@ export default {
 				return top/tmax * scale
 			}
 
-			return (tmax-top)/tmax * scale /*- size*/
+			return (tmax-top)/tmax * scale
 
 		},
 		correct_y(left, top, lmax, tmax, scale, size) {
@@ -247,12 +252,17 @@ export default {
 			}
 
 			if (this.exif.Orientation.includes('270')) {
-				return (lmax-left)/lmax * scale /*- size*/
+				return (lmax-left)/lmax * scale
 			}
 			return left/lmax * scale
 		},
 	},
 	components: {},
+	watch: {
+		active_layers() {
+			this.draw()
+		}
+	},
 	mounted() {
 		this.draw()
 	},
