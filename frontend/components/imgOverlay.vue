@@ -50,31 +50,11 @@ export default {
 	computed: {
 		canvas() { return this.$refs.cv },
 		ctx() { return this.canvas.getContext('2d') },
-		focus_location() { // actually focused thing
-			if (! ('FocusLocation' in this.exif)) {
-				return null
-			}
-
-
-			const pts = this.exif.FocusLocation.split(' ').map(n => parseInt(n))
-
-
-			const size = 10
-			const x = this.correct_x(pts[2], pts[3], pts[0], pts[1], this.width,  size)
-			const y = this.correct_y(pts[2], pts[3], pts[0], pts[1], this.height, size)
-
-			return [
-				align(x-size/2),
-				align(y-size/2),
-				size,
-				size,
-			]
-		},
 		rot() {
-			if (!('CameraOrientation' in this.exif)) {
+			if (!('Orientation' in this.exif)) {
 				return this.exif.ImageWidth < this.exif.ImageHeight
 			}
-			return this.exif.CameraOrientation.includes('CW')
+			return this.exif.Orientation.includes('CW')
 		},
 		nfaces() {
 			if (! ('FacesDetected' in this.exif)) {
@@ -95,7 +75,7 @@ export default {
 			this.ctx.clearRect(0,0,this.exif.ImageWidth, this.exif.ImageHeight)
 
 			// focus plane dots (often a grid)
-			if (this.active_layers.indexOf('Focus Plane') !== -1 && this.n_focal_plane > 0) {
+			if (this.active_layers.indexOf('Focus Plane') !== -1) {
 				this.draw_focal_plane()
 			}
 
@@ -107,11 +87,8 @@ export default {
 				this.draw_af()
 			}
 
-			// what ended up being the focal point, after any recomposing?
-			const foc = this.focus_location
-			if (this.active_layers.indexOf('Focus Point') !== -1 && foc !== null) {
-				this.ctx.strokeStyle = "#ff0000"
-				this.ctx.strokeRect(foc[0], foc[1], foc[2], foc[3])
+			if (this.active_layers.indexOf('Focus Point') !== -1) {
+				this.draw_focus()
 			}
 
 		},
@@ -129,11 +106,103 @@ export default {
 				}				
 			}
 		},
+		draw_focus() {
+			this.ctx.strokeStyle = "#ff0000"
+
+
+			// detect canon method
+			if ('AFAreaHeights' in this.exif && 'AFPointsInFocus' in this.exif) {
+
+
+				const afw = this.exif.AFImageWidth
+				const afh = this.exif.AFImageHeight
+
+				const heights = this.exif.AFAreaHeights.split(' ').map(n=>parseInt(n))
+				const widths = this.exif.AFAreaWidths.split(' ').map(n=>parseInt(n))
+				const xpos = this.exif.AFAreaXPositions.split(' ').map(n=>parseInt(n)+afw/2)
+				const ypos = this.exif.AFAreaYPositions.split(' ').map(n=>parseInt(n)+afh/2)
+
+				const selected = (this.exif.AFPointsInFocus+'').split(',').map(n=>parseInt(n))
+
+				for (let i=0; i<selected.length; i++) {
+					const j = selected[i]
+					if (this.rot) {
+						this.ctx.strokeRect(
+							align(ypos[j]/afh*this.width),
+							align(xpos[j]/afw*this.height),
+							~~(heights[j]/afh*this.width),
+							~~(widths[j]/afw*this.height)
+						)
+					} else {
+						this.ctx.strokeRect(
+							align(xpos[j]/afw * this.width),
+							align(ypos[j]/afh * this.height),
+							~~(widths[j]/afw*this.width),
+							~~(heights[j]/afh*this.height)
+						)
+					}
+				}
+
+				return
+			}
+
+
+			// try sony method
+			if ('FocusLocation' in this.exif) {
+				const pts = this.exif.FocusLocation.split(' ').map(n => parseInt(n))
+
+				const size = 10
+				const x = this.correct_x(pts[2], pts[3], pts[0], pts[1], this.width)
+				const y = this.correct_y(pts[2], pts[3], pts[0], pts[1], this.height)
+
+				this.ctx.strokeRect(align(x-size/2), align(y-size/2), size, size)
+			}
+
+		},
 		draw_af() { // the spot/zone position before recomposing
 			this.ctx.strokeStyle = '#0000ff'
 
 			const mode = 'AFAreaMode' in this.exif ? this.exif.AFAreaMode : ''
 			const setting = 'AFAreaModeSetting' in this.exif ? this.exif.AFAreaModeSetting : ''
+
+
+			if ('AFAreaHeights' in this.exif && 'AFPointsSelected' in this.exif) {
+				// use as canon
+
+				//todo: use Mode here
+				const afw = this.exif.AFImageWidth
+				const afh = this.exif.AFImageHeight
+
+				const heights = this.exif.AFAreaHeights.split(' ').map(n=>parseInt(n))
+				const widths = this.exif.AFAreaWidths.split(' ').map(n=>parseInt(n))
+				const xpos = this.exif.AFAreaXPositions.split(' ').map(n=>parseInt(n)+afw/2)
+				const ypos = this.exif.AFAreaYPositions.split(' ').map(n=>parseInt(n)+afh/2)
+
+				const selected = (this.exif.AFPointsSelected+'').split(',').map(n=>parseInt(n))
+
+
+				const pad=4
+				for (let i=0; i<selected.length; i++) {
+					const j = selected[i]
+					if (this.rot) {
+						this.ctx.strokeRect(
+							align(ypos[j]/afh*this.width)-pad,
+							align(xpos[j]/afw*this.height)-pad,
+							~~(heights[j]/afh*this.width)+pad*2,
+							~~(widths[j]/afw*this.height)+pad*2
+						)
+					} else {
+						this.ctx.strokeRect(
+							align(xpos[j]/afw * this.width)-pad,
+							align(ypos[j]/afh * this.height)-pad,
+							~~(widths[j]/afw*this.width)+pad*2,
+							~~(heights[j]/afh*this.height)+pad*2
+						)
+					}
+				}
+
+				return
+			}
 
 
 			if (setting === 'Wide') {
@@ -185,8 +254,8 @@ export default {
 				const afph = 480
 				const pts = this.exif.FlexibleSpotPosition.split(' ').map(n=>parseInt(n))
 
-				let x = this.correct_x(pts[0], pts[1], afpw, afph, this.width, afsize)
-				let y = this.correct_y(pts[0], pts[1], afpw, afph, this.height, afsize)
+				let x = this.correct_x(pts[0], pts[1], afpw, afph, this.width)
+				let y = this.correct_y(pts[0], pts[1], afpw, afph, this.height)
 				
 				this.ctx.strokeRect(align(x-afsize/2),align(y-afsize/2),afsize,afsize)
 			}
@@ -214,6 +283,42 @@ export default {
 			]
 		},
 		draw_focal_plane() {
+			this.ctx.strokeStyle = '#ffff00'
+
+
+			if ('AFAreaHeights' in this.exif) {
+				// treat as Canon AF Area grid
+
+				const afw = this.exif.AFImageWidth
+				const afh = this.exif.AFImageHeight
+
+				const heights = this.exif.AFAreaHeights.split(' ').map(n=>parseInt(n))
+				const widths = this.exif.AFAreaWidths.split(' ').map(n=>parseInt(n))
+				const xpos = this.exif.AFAreaXPositions.split(' ').map(n=>parseInt(n)+afw/2)
+				const ypos = this.exif.AFAreaYPositions.split(' ').map(n=>parseInt(n)+afh/2)
+
+				for (let i=0; i<xpos.length; i++) {
+					if (this.rot) {
+						this.ctx.strokeRect(
+							align(ypos[i]/afh*this.width),
+							align(xpos[i]/afw*this.height),
+							~~(heights[i]/afh*this.width),
+							~~(widths[i]/afw*this.height)
+						)
+					} else {
+						this.ctx.strokeRect(
+							align(xpos[i]/afw * this.width),
+							align(ypos[i]/afh * this.height),
+							~~(widths[i]/afw*this.width),
+							~~(heights[i]/afh*this.height)
+						)
+					}
+				}
+
+				return
+			}
+
+			// treat as Sony Focal Plane
 			if (! ('FocalPlaneAFPointArea' in this.exif)) {
 				return
 			}
@@ -226,14 +331,12 @@ export default {
 
 				const pts = this.exif['FocalPlaneAFPointLocation'+(i+1)].split(' ').map(n=>parseInt(n))
 
-				let x = this.correct_x(pts[0], pts[1], area[0], area[1], this.width, 10)
-				let y = this.correct_y(pts[0], pts[1], area[0], area[1], this.height, 10)
-
-				this.ctx.strokeStyle = '#ffff00'
+				let x = this.correct_x(pts[0], pts[1], area[0], area[1], this.width)
+				let y = this.correct_y(pts[0], pts[1], area[0], area[1], this.height)
 				this.ctx.strokeRect(x,y,10,10)
 			}
 		},
-		correct_x(left, top, lmax, tmax, scale, size) {
+		correct_x(left, top, lmax, tmax, scale) {
 			if (!this.rot) {
 				return left/lmax * scale
 			}
@@ -246,7 +349,7 @@ export default {
 			return (tmax-top)/tmax * scale
 
 		},
-		correct_y(left, top, lmax, tmax, scale, size) {
+		correct_y(left, top, lmax, tmax, scale) {
 			if (!this.rot) {
 				return top/tmax * scale
 			}
