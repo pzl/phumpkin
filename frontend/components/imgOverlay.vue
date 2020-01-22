@@ -68,6 +68,34 @@ export default {
 			}
 			return parseInt(this.exif.FocalPlaneAFPointsUsed)
 		},
+		canonAF() {
+			if (!('AFAreaXPositions' in this.exif)) {
+				return null
+			}
+
+			const af = {
+				AFWidth: this.exif.AFImageWidth,
+				AFHeight: this.exif.AFImageHeight,
+				x: this.exif.AFAreaXPositions.split(' ').map(n=>parseInt(n)+this.exif.AFImageWidth/2),
+				y: this.exif.AFAreaYPositions.split(' ').map(n=>parseInt(n)+this.exif.AFImageHeight/2),
+			}
+
+			if ('AFAreaHeights' in this.exif) {
+				af.heights = this.exif.AFAreaHeights.split(' ').map(n=>parseInt(n))
+			} else if ('AFAreaHeight' in this.exif) {
+				af.heights = Array(af.x.length).fill(parseInt(this.exif.AFAreaHeight))
+			}
+
+			if ('AFAreaWidths' in this.exif) {
+				af.widths = this.exif.AFAreaWidths.split(' ').map(n=>parseInt(n))
+			} else if ('AFAreaWidth' in this.exif) {
+				af.widths = Array(af.x.length).fill(parseInt(this.exif.AFAreaWidth))
+			}
+
+
+			return af
+
+		},
 		...mapState('interface', ['active_layers'])
 	},
 	methods: {
@@ -111,34 +139,26 @@ export default {
 
 
 			// detect canon method
-			if ('AFAreaHeights' in this.exif && 'AFPointsInFocus' in this.exif) {
+			if ('AFAreaXPositions' in this.exif && 'AFPointsInFocus' in this.exif) {
 
-
-				const afw = this.exif.AFImageWidth
-				const afh = this.exif.AFImageHeight
-
-				const heights = this.exif.AFAreaHeights.split(' ').map(n=>parseInt(n))
-				const widths = this.exif.AFAreaWidths.split(' ').map(n=>parseInt(n))
-				const xpos = this.exif.AFAreaXPositions.split(' ').map(n=>parseInt(n)+afw/2)
-				const ypos = this.exif.AFAreaYPositions.split(' ').map(n=>parseInt(n)+afh/2)
-
+				const af = this.canonAF
 				const selected = (this.exif.AFPointsInFocus+'').split(',').map(n=>parseInt(n))
 
 				for (let i=0; i<selected.length; i++) {
 					const j = selected[i]
 					if (this.rot) {
 						this.ctx.strokeRect(
-							align(ypos[j]/afh*this.width),
-							align(xpos[j]/afw*this.height),
-							~~(heights[j]/afh*this.width),
-							~~(widths[j]/afw*this.height)
+							align(af.y[j]/af.AFHeight*this.width),
+							align(af.x[j]/af.AFWidth*this.height),
+							~~(af.heights[j]/af.AFHeight*this.width),
+							~~(af.widths[j]/af.AFWidth*this.height)
 						)
 					} else {
 						this.ctx.strokeRect(
-							align(xpos[j]/afw * this.width),
-							align(ypos[j]/afh * this.height),
-							~~(widths[j]/afw*this.width),
-							~~(heights[j]/afh*this.height)
+							align(af.x[j]/af.AFWidth * this.width),
+							align(af.y[j]/af.AFHeight * this.height),
+							~~(af.widths[j]/af.AFWidth*this.width),
+							~~(af.heights[j]/af.AFHeight*this.height)
 						)
 					}
 				}
@@ -166,37 +186,29 @@ export default {
 			const setting = 'AFAreaModeSetting' in this.exif ? this.exif.AFAreaModeSetting : ''
 
 
-			if ('AFAreaHeights' in this.exif && 'AFPointsSelected' in this.exif) {
+			if ('AFAreaXPositions' in this.exif && 'AFPointsSelected' in this.exif) {
 				// use as canon
-
 				//todo: use Mode here
-				const afw = this.exif.AFImageWidth
-				const afh = this.exif.AFImageHeight
 
-				const heights = this.exif.AFAreaHeights.split(' ').map(n=>parseInt(n))
-				const widths = this.exif.AFAreaWidths.split(' ').map(n=>parseInt(n))
-				const xpos = this.exif.AFAreaXPositions.split(' ').map(n=>parseInt(n)+afw/2)
-				const ypos = this.exif.AFAreaYPositions.split(' ').map(n=>parseInt(n)+afh/2)
-
+				const af = this.canonAF
 				const selected = (this.exif.AFPointsSelected+'').split(',').map(n=>parseInt(n))
-
 
 				const pad=4
 				for (let i=0; i<selected.length; i++) {
 					const j = selected[i]
 					if (this.rot) {
 						this.ctx.strokeRect(
-							align(ypos[j]/afh*this.width)-pad,
-							align(xpos[j]/afw*this.height)-pad,
-							~~(heights[j]/afh*this.width)+pad*2,
-							~~(widths[j]/afw*this.height)+pad*2
+							align(af.y[j]/af.AFHeight*this.width)-pad,
+							align(af.x[j]/af.AFWidth*this.height)-pad,
+							~~(af.heights[j]/af.AFHeight*this.width)+pad*2,
+							~~(af.widths[j]/af.AFWidth*this.height)+pad*2
 						)
 					} else {
 						this.ctx.strokeRect(
-							align(xpos[j]/afw * this.width)-pad,
-							align(ypos[j]/afh * this.height)-pad,
-							~~(widths[j]/afw*this.width)+pad*2,
-							~~(heights[j]/afh*this.height)+pad*2
+							align(af.x[j]/af.AFWidth * this.width)-pad,
+							align(af.y[j]/af.AFHeight * this.height)-pad,
+							~~(af.widths[j]/af.AFWidth*this.width)+pad*2,
+							~~(af.heights[j]/af.AFHeight*this.height)+pad*2
 						)
 					}
 				}
@@ -286,31 +298,23 @@ export default {
 			this.ctx.strokeStyle = '#ffff00'
 
 
-			if ('AFAreaHeights' in this.exif) {
+			if ('AFAreaXPositions' in this.exif) {
 				// treat as Canon AF Area grid
-
-				const afw = this.exif.AFImageWidth
-				const afh = this.exif.AFImageHeight
-
-				const heights = this.exif.AFAreaHeights.split(' ').map(n=>parseInt(n))
-				const widths = this.exif.AFAreaWidths.split(' ').map(n=>parseInt(n))
-				const xpos = this.exif.AFAreaXPositions.split(' ').map(n=>parseInt(n)+afw/2)
-				const ypos = this.exif.AFAreaYPositions.split(' ').map(n=>parseInt(n)+afh/2)
-
-				for (let i=0; i<xpos.length; i++) {
+				const af = this.canonAF
+				for (let i=0; i<af.x.length; i++) {
 					if (this.rot) {
 						this.ctx.strokeRect(
-							align(ypos[i]/afh*this.width),
-							align(xpos[i]/afw*this.height),
-							~~(heights[i]/afh*this.width),
-							~~(widths[i]/afw*this.height)
+							align(af.y[i]/af.AFHeight*this.width),
+							align(af.x[i]/af.AFWidth*this.height),
+							~~(af.heights[i]/af.AFHeight*this.width),
+							~~(af.widths[i]/af.AFWidth*this.height)
 						)
 					} else {
 						this.ctx.strokeRect(
-							align(xpos[i]/afw * this.width),
-							align(ypos[i]/afh * this.height),
-							~~(widths[i]/afw*this.width),
-							~~(heights[i]/afh*this.height)
+							align(af.x[i]/af.AFWidth * this.width),
+							align(af.y[i]/af.AFHeight * this.height),
+							~~(af.widths[i]/af.AFWidth*this.width),
+							~~(af.heights[i]/af.AFHeight*this.height)
 						)
 					}
 				}
