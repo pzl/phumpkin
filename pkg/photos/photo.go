@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -605,17 +606,17 @@ func (p Photo) MarshalJSON() ([]byte, error) {
 
 	fs, err := p.FileSize()
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("err getting file size for %s: %w", p.Src, err)
 	}
 
 	exif, err := p.Exif()
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("error getting Exif for %s: %w", p.Src, err)
 	}
 
 	xmp, err := p.XMP()
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("error getting XMP for %s: %w", p.Src, err)
 	}
 
 	meta := make(map[string]interface{})
@@ -645,5 +646,9 @@ func (p Photo) MarshalJSON() ([]byte, error) {
 		},
 	}
 
-	return json.Marshal(j)
+	data, err := json.Marshal(j)
+	if err != nil {
+		return nil, fmt.Errorf("error marshalling a photoJSON: %w", err)
+	}
+	return data, nil
 }

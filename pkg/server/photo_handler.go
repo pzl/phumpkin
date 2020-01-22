@@ -324,7 +324,9 @@ func (ph *PhotoHandler) Websocket(w http.ResponseWriter, r *http.Request) {
 		default:
 			resp.Error = "unknown action: " + req.Action
 		}
-		wsjson.Write(r.Context(), c, resp)
+		if err := wsjson.Write(r.Context(), c, resp); err != nil {
+			log.WithError(err).Error("error writing to websocket")
+		}
 	}
 
 	c.Close(websocket.StatusNormalClosure, "k im done with you")
