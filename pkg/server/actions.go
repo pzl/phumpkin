@@ -141,6 +141,7 @@ func (a Action) List(ctx context.Context, lr ListReq) ([]photos.Photo, []string,
 		lr.Offset = 0
 	}
 
+	sort.Strings(dirs)
 	return files[lr.Offset:min(lr.Offset+lr.Count, len(files))], dirs, nil
 }
 
