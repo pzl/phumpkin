@@ -20,7 +20,7 @@
 
 			<v-list dense nav class="d-none d-md-block">
 				<v-list-item-group v-model="nav_selected" color="primary">
-					<v-list-item v-for="(item, i) in nav_items" :key="i">
+					<v-list-item v-for="(item, i) in nav_items" :key="i" nuxt :to="item.page">
 						<v-list-item-icon>
 							<v-icon v-text="item.icon"></v-icon>
 						</v-list-item-icon>
@@ -183,8 +183,8 @@
 			<span class="copy">v. {{ version }} &copy; {{ new Date().getFullYear() }}</span>
 		</v-footer>
 
-		<v-bottom-navigation app class="d-flex d-md-none">
-			<v-btn v-for="(item,i) in nav_items" :key="'btm-nav'+i">
+		<v-bottom-navigation app class="d-flex d-md-none" :value="nav_selected">
+			<v-btn v-for="(item,i) in nav_items" :key="'btm-nav'+i" nuxt :to="item.page">
 				<span>{{ item.text }}</span>
 				<v-icon>{{ item.icon }}</v-icon>
 			</v-btn>
@@ -211,10 +211,10 @@ export default {
 			nav_vis: null,
 			nav_selected: 0,
 			nav_items: [
-				{ text: 'Photos', icon: 'mdi-image' },
+				{ text: 'Photos', icon: 'mdi-image', page: '/' },
 				{ text: 'Faces', icon: 'mdi-face' },
 				{ text: 'Tags', icon: 'mdi-tag' },
-				{ text: 'Places', icon: 'mdi-map-marker' },
+				{ text: 'Places', icon: 'mdi-map-marker', page: 'map' },
 			],
 			infobar_vis: false,
 			sortables: [
