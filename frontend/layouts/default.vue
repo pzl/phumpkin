@@ -18,7 +18,7 @@
 			</v-list-item>
 			<v-divider />
 
-			<v-list dense nav>
+			<v-list dense nav class="d-none d-md-block">
 				<v-list-item-group v-model="nav_selected" color="primary">
 					<v-list-item v-for="(item, i) in nav_items" :key="i">
 						<v-list-item-icon>
@@ -169,16 +169,27 @@
 
 		<scroll-up />
 
+
+
+
 		<v-content>
 			<nuxt />
 		</v-content>
 
 		<v-snackbar :value="toast.show" :color="toast.style">{{ toast.message }} <v-btn dark text @click="toast.show = false">Close</v-btn></v-snackbar>
 
-		<v-footer class="d-flex justify-space-between" app>
+		<v-footer class="d-none d-md-flex justify-space-between" app>
 			<span>Phumpkin</span>
 			<span class="copy">v. {{ version }} &copy; {{ new Date().getFullYear() }}</span>
 		</v-footer>
+
+		<v-bottom-navigation app class="d-flex d-md-none">
+			<v-btn v-for="(item,i) in nav_items" :key="'btm-nav'+i">
+				<span>{{ item.text }}</span>
+				<v-icon>{{ item.icon }}</v-icon>
+			</v-btn>
+		</v-bottom-navigation>
+
 	</v-app>
 </template>
 
