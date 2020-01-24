@@ -220,6 +220,9 @@ func (a Action) GetSize(ctx context.Context, sr SizeReq) (string, error) {
 			if src == filepath {
 				opts = append(opts, resize.SetXMP(xmp))
 			}
+			if sr.Size == photos.SizeXL || sr.Size == photos.SizeFull {
+				opts = append(opts, resize.SetHQ(true)) // turn on HQ for high px count
+			}
 
 			job := a.s.resizer.CreateJob(src, thumbpath, sr.Size.Int(), opts...)
 			priority := resize.PR_NORMAL
