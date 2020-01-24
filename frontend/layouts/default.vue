@@ -68,7 +68,7 @@
 				<v-btn icon @click="clearSelection">
 					<v-icon>mdi-close</v-icon>
 				</v-btn>
-				<v-btn icon @click="view">
+				<v-btn icon @click="this.lightbox = true">
 					<v-icon>mdi-eye</v-icon>
 				</v-btn>
 				<template v-if="selected.length === 1">
@@ -165,17 +165,7 @@
 			</v-btn>
 		</v-app-bar>
 
-		<v-overlay v-if="lightbox" :value="lightbox" z-index="99">
-			<v-sheet height="100%" width="100%">
-				<v-btn icon @click="lightbox = false"><v-icon>mdi-close</v-icon></v-btn>
-				<v-img v-if="selected.length === 1" :height="selected_image[0].thumbs['large'].height" :width="selected_image[0].thumbs['large'].width" :lazy-src="selected_image[0].thumbs['x-small'].url+'?purpose=lazysrc'" :src="selected_image[0].thumbs['large'].url+'?purpose=viewer'" />
-				<v-carousel v-else v-model="lightbox_position" show-arrows-on-hover height="100%" style="width: 100%">
-					<v-carousel-item v-for="(img,i) in selected_image" :key="i">
-						<v-img :height="img.thumbs['large'].height" :width="img.thumbs['large'].width" :lazy-src="img.thumbs['x-small'].url+'?purpose=lazysrc'" :src="img.thumbs['large'].url+'?purpose=viewer'" />
-					</v-carousel-item>
-				</v-carousel>
-			</v-sheet>
-		</v-overlay>
+		<viewer v-if="lightbox" @close="lightbox = false" :photos="selected_image" />
 
 		<scroll-up />
 
@@ -196,6 +186,7 @@
 import scrollUp from '~/components/scrollUp'
 import Rating from '~/components/rating'
 import Tags from '~/components/tags'
+import Viewer from '~/components/viewer'
 import DetailCard from '~/components/info/detailCard'
 import ShotList from '~/components/info/shotList'
 import SizeSelect from '~/components/sizeSelect'
@@ -229,7 +220,6 @@ export default {
 				style: '',
 			},
 			lightbox: false,
-			lightbox_position: 0,
 			size_menu: {
 				show: false,
 				x: 0,
@@ -258,14 +248,6 @@ export default {
 			this.scrolled = top > 0
 		},
 		reconnect() { this.$sock.reconnect() },
-		view() {
-			this.lightbox = true
-			this.lightbox_position = 0
-		},
-		closeView() {
-			this.lightbox = false
-			this.lightbox_position = 0
-		},
 		sort_change(v) {
 			this.sortBy(v)
 			this.resetImages()
@@ -284,32 +266,9 @@ export default {
 				this.size_menu.show = true
 			})
 		},
-		clickOverlay(e) {
-			if (e.target.classList.contains('v-overlay__scrim')) { // clicked off content
-				this.lightbox = false
-			}
-		},
 		keyHandler(ev) {
-			if (!this.lightbox) {
-				switch (ev.keyCode) {
-					case 86:
-						if (this.anySelected) {
-							this.view()
-						}
-						break
-				}
-				return
-			}
-			switch (ev.keyCode) {
-				case 27: // esc
-					this.closeView()
-					break
-				case 37: // left
-					this.lightbox_position--
-					break
-				case 39: // right
-					this.lightbox_position++
-					break
+			if (!this.lightbox && ev.keyCode === 86 && this.anySelected) {
+				this.lightbox = true
 			}
 		},
 		...mapMutations('images', ['clearSelection', 'sortBy', 'sortDir']),
@@ -325,13 +284,6 @@ export default {
 				this.toast.style = "error"
 			}
 		},
-		lightbox(shown) {
-			if (shown) {
-				document.addEventListener('mousedown', this.clickOverlay)
-			} else {
-				document.removeEventListener('mousedown', this.clickOverlay)
-			}
-		}
 	},
 	mounted() {
 		window.addEventListener('keydown', this.keyHandler)
@@ -339,7 +291,7 @@ export default {
 	destroyed() {
 		window.removeEventListener('keydown', this.keyHandler)
 	},
-	components: { scrollUp, Rating, Tags, DetailCard, ShotList, SizeSelect }
+	components: { scrollUp, Rating, Tags, DetailCard, ShotList, Viewer, SizeSelect }
 }
 </script>
 
