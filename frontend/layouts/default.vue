@@ -68,7 +68,7 @@
 				<v-btn icon @click="clearSelection">
 					<v-icon>mdi-close</v-icon>
 				</v-btn>
-				<v-btn icon @click="this.lightbox = true">
+				<v-btn icon @click="lightbox = true">
 					<v-icon>mdi-eye</v-icon>
 				</v-btn>
 				<template v-if="selected.length === 1">

@@ -1,8 +1,16 @@
 <template>
 	<v-overlay :value="true" z-index="99">
-		<v-sheet height="100%" width="100%">
+		<v-sheet>
 			<v-btn icon @click="close"><v-icon>mdi-close</v-icon></v-btn>
-			<v-img v-if="photos.length === 1" :height="photos[0].thumbs['large'].height" :width="photos[0].thumbs['large'].width" :lazy-src="photos[0].thumbs['x-small'].url+'?purpose=lazysrc'" :src="photos[0].thumbs['large'].url+'?purpose=viewer'" />
+			<v-img v-if="photos.length === 1"
+				contain
+				max-width="100vw"
+				max-height="98vh"
+				:aspect-ratio="photos[0].thumbs['large'].width/photos[0].thumbs['large'].height"
+				:width="photos[0].thumbs['large'].width"
+				:lazy-src="photos[0].thumbs['x-small'].url+'?purpose=lazysrc'"
+				:src="photos[0].thumbs['large'].url+'?purpose=viewer'" 
+			/>
 			<v-carousel v-else v-model="position" show-arrows-on-hover height="100%" style="width: 100%">
 				<v-carousel-item v-for="(img,i) in photos" :key="i">
 					<v-img :height="img.thumbs['large'].height" :width="img.thumbs['large'].width" :lazy-src="img.thumbs['x-small'].url+'?purpose=lazysrc'" :src="img.thumbs['large'].url+'?purpose=viewer'" />
