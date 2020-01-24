@@ -30,44 +30,33 @@
 					</v-list-item>
 				</v-list-item-group>
 			</v-list>
-
-			<template v-slot:append>
-				<summary-card v-if="selected.length === 1" v-bind="selected_image" />
-			</template>
 		</v-navigation-drawer>
 
 
-		<!-- Right side bar
-		<v-navigation-drawer app :clipped="!navCollapsed" :mini-variant.sync="toolbar_shrunk" expand-on-hover right v-model="toolbar_vis">
+		<!-- Right side bar -->
+		<v-navigation-drawer app right :clipped="!navCollapsed" :value="infoCollapsed">
 			<v-list-item>
 				<v-list-item-icon>
-					<v-icon @click.stop="toolbar_shrunk = !toolbar_shrunk">mdi-tools</v-icon>
+					<v-btn small icon @click="infobar_vis = !infobar_vis">
+						<v-icon>mdi-information</v-icon>
+					</v-btn>
 				</v-list-item-icon>
 				<v-list-item-content>
-					<v-list-item-title class="title">Toolbar</v-list-item-title>
+					<v-list-item-title class="title">Info<template v-if="selected.length > 1"> ({{selected.length}})</template></v-list-item-title>
 				</v-list-item-content>
 			</v-list-item>
 			<v-divider />
 
-			<v-list dense nav>
-				<v-list-item-group v-model="nav_selected" color="primary">
-					<v-list-item v-for="(item, i) in nav_items" :key="i">
-						<v-list-item-icon>
-							<v-icon v-text="item.icon"></v-icon>
-						</v-list-item-icon>
-						<v-list-item-content>
-							<v-list-item-title v-text="item.text"></v-list-item-title>
-						</v-list-item-content>
-					</v-list-item>
-				</v-list-item-group>
-			</v-list>
+			<template v-if="selected.length < 4">
+				<detail-card v-for="(s,i) in selected_image" :key="'summary'+i" v-bind="s" />
+			</template>
+			<shot-list v-else :photos="selected_image" />
 		</v-navigation-drawer>
-	-->
 
 		<!-- top bar -->
 		<v-app-bar app dense :collapse-on-scroll="!anySelected" :color="anySelected ? 'primary' : ''" :dark="anySelected" :clipped-right="!navCollapsed">
 			<v-app-bar-nav-icon @click.stop="nav_vis = !nav_vis">
-				<v-icon>mdi-chevron-{{ nav_vis ? 'left' : 'right' }}</v-icon>
+				<v-icon>mdi-{{ nav_vis ? 'backburger' : 'menu' }}</v-icon>
 			</v-app-bar-nav-icon>
 			<v-toolbar-title class="d-none d-md-block" >{{ anySelected ? `${selected.length} Selected` : 'Phumpkin' }}</v-toolbar-title>
 			<v-btn icon v-if="!connected" class="red--text" @click="reconnect">
@@ -83,11 +72,6 @@
 					<v-icon>mdi-eye</v-icon>
 				</v-btn>
 				<template v-if="selected.length === 1">
-					<!--
-					<v-btn icon>
-						<v-icon>mdi-information</v-icon>
-					</v-btn>
-					-->
 					<v-btn icon :href="selected_image[0].original.url">
 						<v-icon>mdi-download</v-icon>
 					</v-btn>
@@ -95,6 +79,9 @@
 						<v-icon>mdi-dots-vertical</v-icon>
 					</v-btn>
 				</template>
+				<v-btn icon @click="infobar_vis = !infobar_vis">
+					<v-icon>{{ infobar_vis ? 'mdi-do-not-disturb-off' : 'mdi-information' }}</v-icon>
+				</v-btn>
 				<size-select :x="size_menu.x" :y="size_menu.y" v-model="size_menu.show" :thumbs="selected_image.map(x=>x.thumbs)" />
 				<v-spacer />
 			</template>
@@ -173,9 +160,9 @@
 				<v-icon>mdi-upload</v-icon>
 			</v-btn>
 			-->
-			<div>
-				<v-switch :label="$vuetify.breakpoint.mdAndUp ? 'Dark Mode' : null" v-model="darkness" hide-details />
-			</div>
+			<v-btn icon @click="darkness = !darkness" title="Dark Mode" class="ml-10">
+				<v-icon>mdi-theme-light-dark</v-icon>
+			</v-btn>
 		</v-app-bar>
 
 		<v-overlay v-if="lightbox" :value="lightbox" z-index="99">
@@ -209,7 +196,8 @@
 import scrollUp from '~/components/scrollUp'
 import Rating from '~/components/rating'
 import Tags from '~/components/tags'
-import SummaryCard from '~/components/summaryCard'
+import DetailCard from '~/components/info/detailCard'
+import ShotList from '~/components/info/shotList'
 import SizeSelect from '~/components/sizeSelect'
 import { mapState, mapMutations, mapActions } from 'vuex'
 
@@ -226,8 +214,7 @@ export default {
 				{ text: 'Tags', icon: 'mdi-tag' },
 				{ text: 'Places', icon: 'mdi-map-marker' },
 			],
-			toolbar_vis: null,
-			toolbar_shrunk: true,
+			infobar_vis: false,
 			sortables: [
 				{ text: 'Rating', icon: 'mdi-star-half' },
 				{ text: 'Date Taken', icon: 'mdi-calendar-clock' },
@@ -253,6 +240,7 @@ export default {
 	computed: {
 		anySelected() { return !!this.$store.state.images.selected.length },
 		navCollapsed() { return this.scrolled && !this.anySelected },
+		infoCollapsed() { return this.infobar_vis && this.anySelected },
 		selected_image() {
 			return this.selected.map(i => this.images[i])
 		},
@@ -351,7 +339,7 @@ export default {
 	destroyed() {
 		window.removeEventListener('keydown', this.keyHandler)
 	},
-	components: { scrollUp, Rating, Tags, SummaryCard, SizeSelect }
+	components: { scrollUp, Rating, Tags, DetailCard, ShotList, SizeSelect }
 }
 </script>
 

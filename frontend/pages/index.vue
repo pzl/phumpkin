@@ -6,13 +6,15 @@
 		<v-row class="content-group">
 			<directory v-for="(d,i) in dirs" :key="d+i" :name="d" @click="onDirClick(d, $event)" />
 		</v-row>
-		<v-row class="content-group" justify="space-between" align="start">
+		<v-row class="content-group pa-0 ma-0" justify="space-between" align="start">
 			<thumb
 				v-for="(img, i) in images" :key="i"
 				v-bind="img"
 				:index="i"
 				@click="onClick(i, $event)"
 			/>
+		</v-row>
+		<v-row>
 			<div v-if="loading" class="my-12 d-flex" style="flex-basis: 100%">
 				<v-progress-circular indeterminate class="mx-auto" color="deep-orange lighten-2" />
 			</div>

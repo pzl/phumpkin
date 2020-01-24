@@ -1,6 +1,6 @@
 <template>
-	<v-card outlined  class="ma-2 mb-5 summary-card" :max-height="600">
-		<v-card-title>{{name}} <sup><v-icon small v-if="exif.Make" :title="exif.Model">mdi-{{ camera_icon }}</v-icon></sup></v-card-title>
+	<v-card outlined  class="ma-2 mb-5 summary-card">
+		<v-card-title><name :name="name" :exif="exif" /></v-card-title>
 		<v-card-subtitle><rating :readonly="true" :value="meta.rating" /></v-card-subtitle>
 
 		<v-tabs grow v-model="tab" height="20px">
@@ -16,7 +16,7 @@
 				<v-tab-item value="basic">
 					<div>{{ sizeof }}</div>
 					<div>{{ original.width }}x{{ original.height }}</div>
-					<div v-if="taken">{{taken}}</div>
+					<date :date="exif.DateTimeOriginal" :tz="exif.TimeZone" :offset="exif.OffsetTime" />
 					<div class="loc" v-if="meta.loc"><v-icon small>mdi-map-marker</v-icon> {{ meta.loc.lat }}, {{ meta.loc.lon }}<span v-if="meta.loc.alt">, {{ meta.loc.alt }}</span></div>
 				</v-tab-item>
 				<v-tab-item value="shot-info">
@@ -102,7 +102,6 @@
 		</v-card-text>
 
 		<v-card-actions>
-			<v-spacer />
 			<v-menu v-model="show_meta" :close-on-content-click="false" offset-x>
 				<template v-slot:activator="{ on }">
 					<v-btn v-on="on" icon>
@@ -111,7 +110,7 @@
 				</template>
 
 
-				<v-card :max-height="500">
+				<v-card class="raw-popout">
 					<v-card-text class="text--primary xmp-popout">
 						<pre>{{ JSON.stringify({"meta":meta,"xmp":xmp,"exif":exif}, null, 2) }}</pre>
 					</v-card-text>
@@ -125,6 +124,8 @@
 <script>
 import TagCrumbs from '~/components/tagCrumbs'
 import Rating from '~/components/rating'
+import Name from '~/components/info/name'
+import Date from '~/components/info/date'
 import ashift from '~/components/history/ashift'
 import basecurve from '~/components/history/basecurve'
 import bilateral from '~/components/history/bilateral'
@@ -153,7 +154,6 @@ import highlights from '~/components/history/highlights'
 import lowlight from '~/components/history/lowlight'
 import tonemap from '~/components/history/tonemap'
 import lowpass from '~/components/history/lowpass'
-import { parseISO, format } from 'date-fns'
 
 export default {
 	props: {
@@ -184,16 +184,6 @@ export default {
 				unit++
 			}
 			return b.toFixed(2)+" "+units[unit]
-		},
-		camera_icon() {
-			if (!this.exif || !this.exif.Make) {
-				return ''
-			}
-			switch (this.exif.Make) {
-				case 'SONY': return 'alpha'
-				case 'Canon': return 'alpha-c'
-				case 'iPhone': return 'apple'
-			}
 		},
 		batt() {
 			if (!this.exif || !this.exif.BatteryLevel) {
@@ -256,23 +246,6 @@ export default {
 			}
 			return 'mdi-focus-field'
 		},
-		taken() {
-			if (!this.exif || !this.exif.DateTimeOriginal) {
-				return null
-			}
-			const parts = this.exif.DateTimeOriginal.split(' ')
-			parts[0] = parts[0].replace(/:/g, "-")
-
-			let d = parts.join("T")
-			
-			if ('TimeZone' in this.exif && this.exif.TimeZone) {
-				d += this.exif.TimeZone
-			} else if ('OffsetTime' in this.exif && this.exif.OffsetTime) {
-				d += this.exif.OffsetTime
-			}
-
-			return format(parseISO(d), "PPpp")
-		},
 		colors() {
 			if (!this.xmp || !this.xmp.color_labels || !this.xmp.color_labels.length) {
 				return null
@@ -292,6 +265,8 @@ export default {
 	components: {
 		Rating,
 		TagCrumbs,
+		Name,
+		Date,
 		bloom,
 		channelmixer,
 		sharpen,
@@ -326,6 +301,10 @@ export default {
 
 
 <style>
+.raw-popout {
+	max-height: 500px;
+}
+
 .xmp-popout {
 	background-color: white;
 }
@@ -336,5 +315,6 @@ export default {
 
 .summary-card {
 	overflow-y: auto;
+	max-height: 85%;
 }
 </style>
