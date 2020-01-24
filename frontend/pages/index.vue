@@ -13,8 +13,6 @@
 				:index="i"
 				@click="onClick(i, $event)"
 			/>
-		</v-row>
-		<v-row>
 			<div v-if="loading" class="my-12 d-flex" style="flex-basis: 100%">
 				<v-progress-circular indeterminate class="mx-auto" color="deep-orange lighten-2" />
 			</div>
