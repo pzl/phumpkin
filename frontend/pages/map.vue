@@ -1,34 +1,12 @@
 <template>
 	<div class="mapview" ref="view">
-		<svg :width="width" :height="height">
-			<image v-for="(t,i) in tiles" :key="t.url+i"
-				:href="t.url"
-				:x="t.x" :y="t.y"
-				:width="t.width" :height="t.height"
-			/>
-			<g class="map-photo" v-for="(p,i) in display_photos" :key="p.url" :transform="'translate('+p.position.join(',')+')'" @mouseover="focus_img(p)" @click="focus_img(p)">
-				<circle v-if="scale < 1000" class="photo-spot" :r="4">
-					<title>{{ p.name }}</title>
-				</circle>
-				<g class="photo-view" v-else>
-					<polygon points="-4,-4 4,-4 0,0" :fill="pb" />
-					<g :transform="'translate(-'+pw(p)/2+',-'+(ph(p)+6)+')'">
-						<rect :x="0" :y="0" :width="pw(p)" :height="ph(p)" rx="2" :stroke="pb" />
-						<image :href="p.thumbs['small'].url" :width="pw(p)" :height="ph(p)">
-							<title>{{ p.name }}</title>
-						</image>
-					</g>
-				</g>
-			</g>
-		</svg>
-		<v-select v-model="tile_type" :items="tile_flavors" dense hide-details return-object class="map-type-select" />
-		<div id="attrib">Map tiles by <a href="http://stamen.com">Stamen Design</a>, under <a href="http://creativecommons.org/licenses/by/3.0">CC BY 3.0</a>. Data by <a href="http://openstreetmap.org">OpenStreetMap</a>, under <a :href="tile_type === 'watercolor' ? 'http://creativecommons.org/licenses/by-sa/3.0' :'http://www.openstreetmap.org/copyright'">{{ tile_type === 'watercolor' ? 'CC BY SA' : 'ODbL' }}</a>.</div>
+		<canvas ref="canvas" :width="width" :height="height"></canvas>
 	</div>
 </template>
 
 
 <script>
-import { geoMercator, geoPath } from 'd3-geo'
+import { geoMercator, geoPath, merge, mesh } from 'd3-geo'
 import { event, select } from 'd3-selection'
 import { zoom, zoomIdentity } from 'd3-zoom'
 import { tile, tileWrap } from 'd3-tile'
@@ -59,29 +37,24 @@ const tileSize = 256 // pixel size of each tile
 
 export default {
 	data() {
+		const w = 800
+		const h = 600
 		return {
-			width: 800,
-			height: 600,
-			t: null,
+			width: w,
+			height: h,
+			t: {
+				x: w/2, // initial x translation
+				y: h/2, // initial y translation
+				k: 1 // initial scale
+			},
 			photos: [],
-			tile_flavors: [
-				'toner',
-				'toner-hybrid',
-				'toner-labels',
-				'toner-lines',
-				'toner-background',
-				'toner-lite',
-				'terrain',
-				'terrain-labels',
-				'terrain-lines',
-				'terrain-background',
-				'watercolor'
-			],
-			tile_type: 'toner-lite',
-			tls: [],
+			landData: null,
+			boundary: null,
 		}
 	},
 	computed: {
+		canvas() { return this.$refs.canvas },
+		ctx() { return this.canvas.getContext('2d') },
 		bg() { return this.$vuetify.theme.dark ? '#333' : '#fff' },
 		fg() { return this.$vuetify.theme.dark ? '#4e7372' : '#4e7372' },
 		pb() { return this.$vuetify.theme.dark ? 'black' : '#8c8c8c' }, // photo border color
@@ -117,7 +90,9 @@ export default {
 				.scale( ((this.width-1)/2/Math.PI) * this.scale)
 				.translate([this.tx, this.ty])
 		},
-		path() { return geoPath().projection(this.projection) },
+		path() {
+			return geoPath(this.projection, this.ctx)
+		},
 		parsed_photos() {
 			if (!this.photos) {
 				return []
@@ -129,42 +104,53 @@ export default {
 				return p
 			})
 		},
-		display_photos() {
-			return this.parsed_photos.sort((a,b) => {
-				return a.hovered - b.hovered
-			})
-		}
 	},
 	methods: {
 		zoomed() {
 			this.t = event.transform
-			this.tls = this.tile(event.transform)
+			this.draw()
 		},
 		pw(photo){ return photo.thumbs['small'].width/2 },
 		ph(photo) { return photo.thumbs['small'].height/2 },
-		focus_img(photo) {
-			const idx = this.photos.indexOf(photo)
-			if (idx !== -1) {
-				this.photos[idx].hovered = new Date()				
+		draw() {
+			this.ctx.clearRect(0,0,this.width, this.height)
+			this.ctx.save()
+			
+			if (this.t) {
+				this.ctx.translate(this.t.x, this.t.y)
+				this.ctx.scale(this.t.k, this.t.k)
 			}
+
+			// draw basic map
+			this.ctx.beginPath()
+			this.path({ type: 'Sphere' })
+			this.ctx.strokeStyle = '#ff0000'
+			this.ctx.stroke()
+
+			this.ctx.beginPath()
+			this.path(this.landData)
+			this.ctx.lineWidth = 0.5
+			this.ctx.strokeStyle = '#0000ff'
+			this.ctx.stroke()
 		}
 	},
 	mounted() {
 		this.width = this.$refs.view.clientWidth
 		this.height = this.$refs.view.clientHeight
 		const z = zoom().scaleExtent([1,1<<16]).on('zoom', this.zoomed)
-		select('.mapview svg')
-			.call(z)
+		select('.mapview canvas').call(z)
 			.call(
 				z.transform,
 				zoomIdentity
 					.translate(this.width/2, this.height/2)
 			)
-
-		this.tls = this.tile()
-
+		this.$axios.get('/countries-10m.json').then(d => {
+			this.landData = merge(d.data, d.data.objects.countries.geometries)
+			this.boundary = mesh(d.data, d.data.objects.countries, (a,b) => a !== b)
+			this.draw()
+		})
 		this.$fetch('/api/v1/query/locations')
-			.then(data => { this.photos = data.data.photos.map(p=>{ p.hovered = 0; return p }) })
+			.then(data => { this.photos = data.data.photos })
 	},
 }
 </script>
