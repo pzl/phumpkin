@@ -30,6 +30,7 @@ func (s *server) routes() {
 	s.router.Route("/api/v1", func(v1 chi.Router) {
 		v1.Use(mstk.APIVer(1))
 		v1.Mount("/photos", s.Photos())
+		v1.Get("/locations", s.PhotoHandler.Locations)
 		v1.Get("/thumb/{size}/*", s.PhotoHandler.GetThumb)
 		v1.Get("/ws", s.PhotoHandler.Websocket)
 

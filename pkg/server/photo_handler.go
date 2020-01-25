@@ -112,6 +112,22 @@ func (ph *PhotoHandler) GetThumb(w http.ResponseWriter, r *http.Request) {
 	http.ServeFile(w, r, fp)
 }
 
+func (ph *PhotoHandler) Locations(w http.ResponseWriter, r *http.Request) {
+	log := logger.GetLog(r)
+	//photoDir := r.Context().Value("photoDir").(string)
+	//thumbDir := r.Context().Value("thumbDir").(string)
+
+	p, err := photos.WithLocation(r.Context())
+	if err != nil {
+		log.WithError(err).Error("error getting photos with locations")
+		writeErr(w, 500, err)
+		return
+	}
+	writeJSON(w, r, map[string]interface{}{
+		"photos": p,
+	})
+}
+
 type SockRequest struct {
 	Action string                 `json:"action"`
 	ID     string                 `json:"_id"`

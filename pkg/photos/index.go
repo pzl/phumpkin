@@ -15,7 +15,6 @@ import (
 )
 
 // index structure in DB
-//  - fileID.resolution (from exif)
 //  - fileID.XMP
 //    + fileID.XMP.time
 //  - fileID.EXIF

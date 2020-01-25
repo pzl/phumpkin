@@ -1,14 +1,95 @@
 package photos
 
 import (
+	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/dgraph-io/badger"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 )
+
+func WithLocation(ctx context.Context) ([]Photo, error) {
+	db := ctx.Value("badger").(*badger.DB)
+	photoDir := ctx.Value("photoDir").(string)
+	exsuf := []byte(".EXIF")
+	dot := byte('.')
+
+	pmap := make(map[string]Photo)
+
+	err := db.View(func(tx *badger.Txn) error {
+		opts := badger.DefaultIteratorOptions
+		it := tx.NewIterator(opts)
+		defer it.Close()
+		for it.Rewind(); it.Valid(); it.Next() {
+			item := it.Item()
+			k := item.Key()
+			if !bytes.HasSuffix(k, exsuf) {
+				continue
+			}
+			idx := bytes.LastIndexByte(k, dot)
+			if idx == -1 {
+				continue
+			}
+
+			v, err := item.ValueCopy(nil)
+			if err != nil {
+				return err
+			}
+
+			ex := make(map[string]interface{})
+			if err := json.Unmarshal(v, &ex); err != nil {
+				return err
+			}
+
+			loni, ok := ex["GPSLongitude"]
+			if !ok {
+				continue
+			}
+			lon, ok := loni.(string)
+			if !ok {
+				continue
+			}
+			lati, ok := ex["GPSLatitude"]
+			if !ok {
+				continue
+			}
+			lat, ok := lati.(string)
+			if !ok {
+				continue
+			}
+
+			if strings.TrimSpace(lon) == "" || strings.TrimSpace(lat) == "" {
+				continue
+			}
+
+			fname := string(k[:len(k)-len(exsuf)])
+			p, err := FromSrc(ctx, photoDir+"/"+fname)
+			if err != nil {
+				return err
+			}
+			p.exifRead = true
+			p.exif = ex
+			pmap[fname] = p
+
+		}
+		return nil
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	ps := make([]Photo, 0, len(pmap))
+	for k := range pmap {
+		ps = append(ps, pmap[k])
+	}
+
+	return ps, nil
+}
 
 // returns the modification time for an EXIF or XMP entry
 func ReadModTime(db *badger.DB, key string, file string) (time.Time, error) {
