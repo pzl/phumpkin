@@ -17,7 +17,6 @@ func WithLocation(ctx context.Context) ([]Photo, error) {
 	db := ctx.Value("badger").(*badger.DB)
 	photoDir := ctx.Value("photoDir").(string)
 	exsuf := []byte(".EXIF")
-	dot := byte('.')
 
 	pmap := make(map[string]Photo)
 
@@ -32,18 +31,9 @@ func WithLocation(ctx context.Context) ([]Photo, error) {
 			if !bytes.HasSuffix(k, exsuf) {
 				continue
 			}
-			idx := bytes.LastIndexByte(k, dot)
-			if idx == -1 {
-				continue
-			}
-
-			v, err := item.ValueCopy(nil)
-			if err != nil {
-				return err
-			}
 
 			ex := make(map[string]interface{})
-			if err := json.Unmarshal(v, &ex); err != nil {
+			if err := item.Value(func(v []byte) error { return json.Unmarshal(v, &ex) }); err != nil {
 				return err
 			}
 
