@@ -11,6 +11,7 @@
 			</circle>
 		</svg>
 		<v-select v-model="tile_type" :items="tile_flavors" dense hide-details return-object class="map-type-select" />
+		<div id="attrib">Map tiles by <a href="http://stamen.com">Stamen Design</a>, under <a href="http://creativecommons.org/licenses/by/3.0">CC BY 3.0</a>. Data by <a href="http://openstreetmap.org">OpenStreetMap</a>, under <a :href="tile_type === 'watercolor' ? 'http://creativecommons.org/licenses/by-sa/3.0' :'http://www.openstreetmap.org/copyright'">{{ tile_type === 'watercolor' ? 'CC BY SA' : 'ODbL' }}</a>.</div>
 	</div>
 </template>
 
@@ -163,6 +164,21 @@ export default {
 .photo-spot {
 	fill: #ff0000;
 	vector-effect: non-scaling-stroke;
+}
+
+#attrib {
+	position: absolute;
+	bottom: 5px;
+	right: 5px;
+	font: 10px sans-serif;
+	padding: 3px;
+	opacity: 0.8;
+}
+
+#attrib a {
+	color: #000;
+	font-weight: 700;
+	text-decoration: none;
 }
 
 </style>
