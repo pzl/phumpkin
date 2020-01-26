@@ -23,6 +23,7 @@ func WithLocation(ctx context.Context) ([]Photo, error) {
 
 	err := db.View(func(tx *badger.Txn) error {
 		opts := badger.DefaultIteratorOptions
+		opts.PrefetchValues = false
 		it := tx.NewIterator(opts)
 		defer it.Close()
 		for it.Rewind(); it.Valid(); it.Next() {
