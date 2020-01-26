@@ -280,6 +280,11 @@ export default {
 		keyHandler(ev) {
 			if (!this.lightbox && ev.keyCode === 86 && this.anySelected) {
 				this.lightbox = true
+				return
+			}
+			if (ev.keyCode === 73 && this.anySelected) {
+				this.infobar_vis = !this.infobar_vis
+				return
 			}
 		},
 		...mapMutations('images', ['clearSelection', 'sortBy', 'sortDir']),
