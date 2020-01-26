@@ -1,24 +1,25 @@
 <template>
 	<div class="mapview" ref="view">
 		<svg :width="width" :height="height">
-			<path class="sphere" :d="sphereData" :transform="t" :fill="bg" />
-			<path class="land" :d="land" :transform="t" :fill="fg" />
-			<path class="countries boundary" :d="countries" :transform="t" :stroke="bg" />
-			<path v-if="t && scale > 2" class="states boundary" :d="states" :transform="t" :stroke="bg" />
-			<path v-if="t && scale > 8" class="counties boundary" :d="counties" :transform="t" :stroke="bg" />
-			<circle class="photo-spot" v-for="(p,i) in parsed_photos" :key="'photo'+i" :cx="p.position[0]" :cy="p.position[1]" :r="4/scale" :transform="t">
+			<image v-for="(t,i) in tiles" :key="t.url+i"
+				:href="t.url"
+				:x="t.x" :y="t.y"
+				:width="t.width" :height="t.height"
+			/>
+			<circle class="photo-spot" v-for="(p,i) in parsed_photos" :key="'photo'+i" :cx="p.position[0]" :cy="p.position[1]" :r="4">
 				<title>{{ p.name }}</title>
 			</circle>
 		</svg>
+		<v-select v-model="tile_type" :items="tile_flavors" dense hide-details return-object class="map-type-select" />
 	</div>
 </template>
 
 
 <script>
-import { merge, mesh } from 'topojson-client'
 import { geoMercator, geoPath } from 'd3-geo'
 import { event, select } from 'd3-selection'
-import { zoom } from 'd3-zoom'
+import { zoom, zoomIdentity } from 'd3-zoom'
+import { tile, tileWrap } from 'd3-tile'
 
 function geoConvert(dms) {
 	let m
@@ -42,37 +43,68 @@ function geoConvert(dms) {
 	return sign * (d + (m/60) + (s/3600))
 }
 
+const tileSize = 256 // pixel size of each tile
+
 export default {
 	data() {
 		return {
 			width: 800,
 			height: 600,
-			land: null,
-			countries: null,
-			states: null,
-			counties: null,
 			t: null,
-			cache: {},
 			photos: [],
+			tile_flavors: [
+				'toner',
+				'toner-hybrid',
+				'toner-labels',
+				'toner-lines',
+				'toner-background',
+				'toner-lite',
+				'terrain',
+				'terrain-labels',
+				'terrain-lines',
+				'terrain-background',
+				'watercolor'
+			],
+			tile_type: 'toner-lite',
+			tls: [],
 		}
 	},
 	computed: {
 		bg() { return this.$vuetify.theme.dark ? '#333' : '#fff' },
 		fg() { return this.$vuetify.theme.dark ? '#4e7372' : '#4e7372' },
+		url() {
+			const dpr = window.devicePixelRatio
+			return (x,y,z) => `https://stamen-tiles-${"abc"[Math.abs(x+y) % 3]}.a.ssl.fastly.net/${this.tile_type}/${z}/${x}/${y}${dpr > 1 ? '@2x' : ''}.png`
+		},
+		tile() {
+			return tile()
+					.size([this.width, this.height])
+					.scale(this.projection.scale()*2*Math.PI)
+					.translate(this.projection([0,0]))
+					.clampX(false)
+
+		},
+		tiles() {
+			return this.tls.map(([x,y,z], i, {translate: [tx,ty], scale: k}) => {
+				const [wx, wy, wz] = tileWrap([x,y,z])
+				return {
+					url: this.url(wx,wy,wz),
+					x: Math.round((x+tx)*k),
+					y: Math.round((y+ty)*k),
+					height: k,
+					width: k,
+				}
+			})
+		},
 		scale(){ return this.t && this.t.k !== null ? this.t.k : 1 },
+		tx() { return this.t && this.t.x !== null ? this.t.x : 1 },
+		ty() { return this.t && this.t.y !== null ? this.t.y : 1 },
 		projection() {
-			return geoMercator().translate([this.width/2, this.height/2]).scale((this.width-1)/2/Math.PI)
+			return geoMercator()
+				.scale( ((this.width-1)/2/Math.PI) * this.scale)
+				.translate([this.tx, this.ty])
 		},
 		path() { return geoPath().projection(this.projection) },
-		sphereData() { return this.path({ type: 'Sphere' }) },
-		level() {
-			if (this.scale < 7) {
-				return '110'
-			} else if (this.scale < 30) {
-				return '50'
-			}
-			return '10'
-		},
 		parsed_photos() {
 			if (!this.photos) {
 				return null
@@ -88,43 +120,22 @@ export default {
 	methods: {
 		zoomed() {
 			this.t = event.transform
+			this.tls = this.tile(event.transform)
 		},
-		load() {
-			if (this.level in this.cache) {
-				this.land = this.cache[this.level].land
-				this.countries = this.cache[this.level].countries
-				return
-			}
-			this.$axios.get(location.origin + '/countries-'+this.level+'m.json').then(d => {
-				this.cache[this.level] = {
-					land: this.path(merge(d.data, d.data.objects.countries.geometries)),
-					countries: this.path(mesh(d.data, d.data.objects.countries, (a,b) => a !== b)),
-				}
-				this.land = this.cache[this.level].land
-				this.countries = this.cache[this.level].countries
-			})
-		},
-		loadUS() {
-			this.$axios.get(location.origin+'/states-10m.json').then(d => {
-				this.states = this.path(mesh(d.data, d.data.objects.states))
-			})
-			this.$axios.get(location.origin+'/counties-10m.json').then(d => {
-				this.counties = this.path(mesh(d.data, d.data.objects.counties, (a,b) => a !== b))
-			})
-		}
-	},
-	watch: {
-		level() {
-			this.load()
-		}
 	},
 	mounted() {
 		this.width = this.$refs.view.clientWidth
 		this.height = this.$refs.view.clientHeight
-		const z = zoom().scaleExtent([1,600]).on('zoom', this.zoomed)
-		select('.mapview svg').call(z)
-		this.load()
-		this.loadUS()
+		const z = zoom().scaleExtent([1,1<<16]).on('zoom', this.zoomed)
+		select('.mapview svg')
+			.call(z)
+			.call(
+				z.transform,
+				zoomIdentity
+					.translate(this.width/2, this.height/2)
+			)
+
+		this.tls = this.tile()
 
 		let server = location.origin
 		if (server === "http://localhost:3000") {
@@ -140,13 +151,13 @@ export default {
 <style>
 .mapview {
 	height: 90vh;
+	position: relative;
 }
 
-.boundary {
-	fill: none;
-	stroke-linejoin: round;
-	stroke-linecap: round;
-	vector-effect: non-scaling-stroke;
+.map-type-select {
+	position: absolute;
+	top: 20px;
+	left: 20px;
 }
 
 .photo-spot {
