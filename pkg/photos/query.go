@@ -1,9 +1,8 @@
 package photos
 
 import (
+	"bytes"
 	"context"
-	"encoding/json"
-	"strings"
 
 	"github.com/dgraph-io/badger"
 )
@@ -12,9 +11,9 @@ func WithLocation(ctx context.Context) ([]Photo, error) {
 	db := ctx.Value("badger").(*badger.DB)
 	photoDir := ctx.Value("photoDir").(string)
 
-	ps := make([]Photo, 0, 20)
+	pmap := make(map[string]struct{})
 	err := db.View(func(tx *badger.Txn) error {
-		pfx := []byte{primaryRecord, SourceEXIF, DataRecord}
+		pfx := []byte{indexRecord, SourceEXIF, 'G', 'P', 'S', 'L', 'a', 't'}
 		opts := badger.DefaultIteratorOptions
 		opts.PrefetchValues = false
 		opts.Prefix = pfx
@@ -22,48 +21,29 @@ func WithLocation(ctx context.Context) ([]Photo, error) {
 		defer it.Close()
 		it.Rewind()
 		for it.Seek(pfx); it.ValidForPrefix(pfx); it.Next() {
-			item := it.Item()
-			ex := make(map[string]interface{})
-			if err := item.Value(func(v []byte) error { return json.Unmarshal(v, &ex) }); err != nil {
-				return err
-			}
+			k := it.Item().Key()
 
-			loni, ok := ex["GPSLongitude"]
-			if !ok {
-				continue
-			}
-			lon, ok := loni.(string)
-			if !ok {
-				continue
-			}
-			lati, ok := ex["GPSLatitude"]
-			if !ok {
-				continue
-			}
-			lat, ok := lati.(string)
-			if !ok {
+			spl := bytes.LastIndexByte(k, 0)
+			if spl == -1 {
 				continue
 			}
 
-			if strings.TrimSpace(lon) == "" || strings.TrimSpace(lat) == "" {
-				continue
-			}
-
-			k := item.Key()
-			fname := string(k[3:])
-			p, err := FromSrc(ctx, photoDir+"/"+fname)
-			if err != nil {
-				return err
-			}
-			p.exifRead = true
-			p.exif = ex
-			ps = append(ps, p)
-
+			fname := string(k[spl+1:])
+			pmap[fname] = struct{}{}
 		}
 		return nil
 	})
 	if err != nil {
 		return nil, err
+	}
+
+	ps := make([]Photo, 0, len(pmap))
+	for k := range pmap {
+		p, err := FromSrc(ctx, photoDir+"/"+k)
+		if err != nil {
+			return nil, err
+		}
+		ps = append(ps, p)
 	}
 
 	return ps, nil
