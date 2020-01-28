@@ -58,7 +58,7 @@ type DTXMP struct {
 }
 
 // read the contents of an XMP file. Absolute path expected
-func ReadXMP(file string) (XMP, error) {
+func ReadXMPFile(file string) (XMP, error) {
 
 	f, err := ioutil.ReadFile(file)
 	if err != nil {
@@ -121,7 +121,7 @@ func ReadXMP(file string) (XMP, error) {
 /* ------------ EXIF parsing --------------- */
 
 // read the exif properties of the given path. Absolute file path expected
-func ReadExif(file string) (map[string]interface{}, error) {
+func ReadExifFile(file string) (map[string]interface{}, error) {
 
 	cmd := exec.Command("exiftool", "-j", file)
 

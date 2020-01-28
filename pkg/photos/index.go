@@ -14,12 +14,6 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-// index structure in DB
-//  - fileID.XMP
-//    + fileID.XMP.time
-//  - fileID.EXIF
-//    + fileID.EXIF.time
-
 type Indexer struct {
 	photoDir string
 	watcher  *fsnotify.Watcher
@@ -94,27 +88,23 @@ func (idx *Indexer) indexFile(file string, xmp bool, exif bool, batcher *badger.
 	l := idx.log.WithField("file", file)
 	fullpath := filepath.Join(idx.photoDir, file)
 	if xmp {
-		if x, err := ReadXMP(fullpath + ".xmp"); err != nil {
+		if x, err := ReadXMPFile(fullpath + ".xmp"); err != nil {
 			l.WithError(err).Error("error reading XMP file")
 		} else {
 			l.Debug("indexing XMP data")
-			if batcher != nil {
-				writeXMPBatch(l, batcher, file, x)
-			} else {
-				writeXMP(l, idx.db, file, x)
+			if err := Write(idx.ctx, SourceXMP, file, x, batcher); err != nil {
+				l.WithError(err).Error("error writing XMP to db")
 			}
 		}
 	}
 
 	if exif {
-		if data, err := ReadExif(fullpath); err != nil {
+		if data, err := ReadExifFile(fullpath); err != nil {
 			l.WithError(err).Error("error reading exif")
 		} else {
 			l.Debug("indexing EXIF data")
-			if batcher != nil {
-				writeEXIFBatch(l, batcher, file, data)
-			} else {
-				writeEXIF(l, idx.db, file, data)
+			if err := Write(idx.ctx, SourceEXIF, file, data, batcher); err != nil {
+				l.WithError(err).Error("error writing exif to db")
 			}
 		}
 	}
@@ -140,7 +130,9 @@ func (idx *Indexer) needsIndex(file string) (bool, bool, error) {
 	exif := metaState{}
 
 	if fi, err := os.Stat(fullpath + ".xmp"); err != nil {
-		l.WithError(err).Trace("problem looking at associated XMP file")
+		if !os.IsNotExist(err) {
+			l.WithError(err).Trace("problem looking at associated XMP file")
+		}
 		xmp.exists = false
 	} else {
 		xmp.exists = true
@@ -160,8 +152,10 @@ func (idx *Indexer) needsIndex(file string) (bool, bool, error) {
 		// process XMP
 		if xmp.exists {
 			// get and check db write time against file mod time
-			if t, err := getAsTime(tx, []byte(file+".XMP.time")); err != nil {
-				l.WithError(err).Trace("cannot read db XMP.time write time. Will read XMP from file")
+			if t, err := getAsTime(tx, TimeKey(file, SourceXMP)); err != nil {
+				if err != badger.ErrKeyNotFound {
+					l.WithError(err).Trace("cannot read db XMP.time write time. Will read XMP from file")
+				}
 				xmp.needIndex = true
 			} else {
 				xmp.dbMod = t
@@ -173,8 +167,10 @@ func (idx *Indexer) needsIndex(file string) (bool, bool, error) {
 			}
 		}
 
-		if t, err := getAsTime(tx, []byte(file+".EXIF.time")); err != nil {
-			l.WithError(err).Trace("error reading exif mod time from db. Will read exif from file")
+		if t, err := getAsTime(tx, TimeKey(file, SourceEXIF)); err != nil {
+			if err != badger.ErrKeyNotFound {
+				l.WithError(err).Trace("error reading exif mod time from db. Will read exif from file")
+			}
 			exif.needIndex = true
 		} else {
 			exif.dbMod = t
@@ -197,11 +193,15 @@ func (idx *Indexer) needsIndex(file string) (bool, bool, error) {
 // relative path needed
 func (idx *Indexer) dropIndex(file string) error {
 	idx.log.WithField("path", file).Debug("dropping index")
+	key := DataKey(file, SourceXMP)
 	return idx.db.Update(func(tx *badger.Txn) error {
-		tx.Delete([]byte(file + ".XMP.time"))  // nolint
-		tx.Delete([]byte(file + ".XMP"))       // nolint
-		tx.Delete([]byte(file + ".EXIF.time")) // nolint
-		tx.Delete([]byte(file + ".EXIF"))      // nolint
+		tx.Delete(key) // nolint
+		key[2] = TimestampRecord
+		tx.Delete(key) // nolint
+		key[1] = SourceEXIF
+		tx.Delete(key) // nolint
+		key[2] = DataRecord
+		tx.Delete(key) // nolint
 		return nil
 	})
 }
