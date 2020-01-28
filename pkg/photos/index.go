@@ -333,15 +333,19 @@ func (idx *Indexer) StartWatcher(ctx context.Context) error {
 			w.Close()
 			idx.watcher = nil
 		}()
+
+		wdb := writeDebouncer(idx.Index, 1500*time.Millisecond)
 		for {
 			select {
 			case event := <-w.Events:
-				idx.log.WithField("event", event).Trace("got watch event")
+				if !eventIs(event, fsnotify.Write) { // may get LOTS of write events per chunk, way too much for logging
+					idx.log.WithField("event", event).Trace("got watch event")
+				}
 				if eventIs(event, fsnotify.Remove) || eventIs(event, fsnotify.Rename) {
 					go idx.dropIndex(idx.relpath(event.Name)) // nolint
 				}
 				if eventIs(event, fsnotify.Create) || eventIs(event, fsnotify.Write) {
-					go idx.Index(idx.relpath(event.Name), true)
+					wdb <- idx.relpath(event.Name)
 				}
 
 				// if a directory is added, we should add it
@@ -361,6 +365,29 @@ func (idx *Indexer) StartWatcher(ctx context.Context) error {
 		}
 	}()
 	return nil
+}
+
+func writeDebouncer(idx func(string, bool), timeout time.Duration) chan string {
+	incoming := make(chan string)
+
+	go func() {
+		var s string
+		t := time.NewTimer(timeout)
+		t.Stop()
+
+		for {
+			select {
+			case s = <-incoming:
+				t.Stop()
+				t.Reset(timeout)
+			case <-t.C:
+				go idx(s, true)
+			}
+		}
+	}()
+
+	return incoming
+
 }
 
 // *ABSOLUTE* path expected
