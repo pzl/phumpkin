@@ -200,10 +200,11 @@ func WithLocation(ctx context.Context) ([]Photo, error) {
 
 	ps := make([]Photo, 0, 20)
 	err := db.View(func(tx *badger.Txn) error {
+		pfx := []byte{primaryRecord, SourceEXIF, DataRecord}
 		opts := badger.DefaultIteratorOptions
 		opts.PrefetchValues = false
+		opts.Prefix = pfx
 		it := tx.NewIterator(opts)
-		pfx := []byte{primaryRecord, SourceEXIF, DataRecord}
 		defer it.Close()
 		it.Rewind()
 		for it.Seek(pfx); it.ValidForPrefix(pfx); it.Next() {
