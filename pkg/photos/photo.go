@@ -499,9 +499,7 @@ func (p *Photo) Ex_if_string(prop string, f func(string)) {
 }
 
 func (p *Photo) loadExif() error {
-	db := p.ctx.Value("badger").(*badger.DB)
-
-	t, err := ReadModTime(db, "EXIF", p.Relpath())
+	t, err := ReadTime(p.ctx, TimeKey(p.Relpath(), SourceEXIF))
 	if err != nil && err != badger.ErrKeyNotFound {
 		return err
 	}
@@ -522,15 +520,14 @@ func (p *Photo) loadExif() error {
 	return nil
 }
 
-func (p Photo) loadExifFromFile() (map[string]interface{}, error) { return ReadExif(p.Src) }
+func (p Photo) loadExifFromFile() (map[string]interface{}, error) { return ReadExifFile(p.Src) }
 func (p Photo) loadExifFromDB() (map[string]interface{}, error) {
-	return readExifDB(p.ctx.Value("badger").(*badger.DB), p.Relpath())
+	e := make(map[string]interface{})
+	return e, Read(p.ctx, DataKey(p.Relpath(), SourceEXIF), &e)
 }
 
 func (p *Photo) loadXmp() error {
-	db := p.ctx.Value("badger").(*badger.DB)
-
-	t, err := ReadModTime(db, "XMP", p.Relpath())
+	t, err := ReadTime(p.ctx, TimeKey(p.Relpath(), SourceXMP))
 	if err != nil && err != badger.ErrKeyNotFound {
 		return err
 	}
@@ -550,9 +547,10 @@ func (p *Photo) loadXmp() error {
 	return nil
 }
 
-func (p *Photo) loadXMPFromFile() (XMP, error) { return ReadXMP(p.Src + ".xmp") }
+func (p *Photo) loadXMPFromFile() (XMP, error) { return ReadXMPFile(p.Src + ".xmp") }
 func (p *Photo) loadXMPFromDB() (XMP, error) {
-	return readXMPDB(p.ctx.Value("badger").(*badger.DB), p.Relpath())
+	var x XMP
+	return x, Read(p.ctx, DataKey(p.Relpath(), SourceXMP), &x)
 }
 
 /* JSON */
