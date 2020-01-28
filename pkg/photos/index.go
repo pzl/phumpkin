@@ -1,10 +1,13 @@
 package photos
 
 import (
+	"bytes"
 	"context"
 	"errors"
+	"fmt"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -107,6 +110,41 @@ func (idx *Indexer) indexFile(file string, xmp bool, exif bool, batcher *badger.
 				if err := Write(idx.ctx, SourceXMP, file, x, batcher); err != nil {
 					l.WithError(err).Error("error writing XMP to db")
 				}
+				toIndex := [][2]string{
+					[2]string{"derived_from", x.DerivedFromFile},
+					[2]string{"rating", strconv.Itoa(x.Rating)},
+					[2]string{"auto_presets_applied", strconv.FormatBool(x.AutoPresets)},
+					[2]string{"xmp_version", strconv.Itoa(x.XMPVersion)},
+					[2]string{"creator", x.Creator},
+					[2]string{"rights", x.Rights},
+					[2]string{"title", x.Title},
+				}
+				if x.Location != nil {
+					toIndex = append(toIndex, [2]string{"loc.lat", x.Location.Lat})
+					toIndex = append(toIndex, [2]string{"loc.lon", x.Location.Lon})
+					toIndex = append(toIndex, [2]string{"loc.alt", x.Location.Altitude})
+				}
+				for _, c := range x.ColorLabels {
+					toIndex = append(toIndex, [2]string{"color_labels", c})
+				}
+				for _, t := range x.Tags {
+					toIndex = append(toIndex, [2]string{"tags", t})
+				}
+				for _, h := range x.History {
+					if !h.Enabled {
+						continue
+					}
+					toIndex = append(toIndex, [2]string{"history", h.OpName})
+				}
+
+				for _, ti := range toIndex {
+					if ti[1] == "" {
+						continue // skip blank values
+					}
+					if err := WriteIdxField(idx.ctx, SourceXMP, file, ti[0], []byte(ti[1]), batcher); err != nil {
+						l.WithError(err).WithField("field", ti[0]).WithField("value", ti[1]).Error("error writing XMP field to index")
+					}
+				}
 			}
 		}()
 	}
@@ -121,6 +159,33 @@ func (idx *Indexer) indexFile(file string, xmp bool, exif bool, batcher *badger.
 				l.Debug("indexing EXIF data")
 				if err := Write(idx.ctx, SourceEXIF, file, data, batcher); err != nil {
 					l.WithError(err).Error("error writing exif to db")
+				}
+				for k, v := range data {
+					var s string
+					switch tv := v.(type) {
+					case int:
+						s = strconv.Itoa(tv)
+					case int64:
+						s = strconv.FormatInt(tv, 10)
+					case float64:
+						s = strconv.FormatFloat(tv, 'g', -1, 64)
+					case bool:
+						s = strconv.FormatBool(tv)
+					case string:
+						s = tv
+					default:
+						s = fmt.Sprintf("unhandled :: %T", v)
+					}
+					if s == "(none)" || s == "" || s == "n/a" {
+						continue
+					}
+					// truncate to avoid using space
+					if len(s) > 120 {
+						s = s[:120]
+					}
+					if err := WriteIdxField(idx.ctx, SourceEXIF, file, k, []byte(s), batcher); err != nil {
+						l.WithError(err).WithField("field", k).WithField("value", s).Error("error writing EXIF field to index")
+					}
 				}
 			}
 		}()
@@ -213,14 +278,42 @@ func (idx *Indexer) needsIndex(file string) (bool, bool, error) {
 func (idx *Indexer) dropIndex(file string) error {
 	idx.log.WithField("path", file).Debug("dropping index")
 	key := DataKey(file, SourceXMP)
+
+	del := [][2]byte{
+		[2]byte{SourceEXIF, DataRecord},
+		[2]byte{SourceEXIF, TimestampRecord},
+		[2]byte{SourceXMP, DataRecord},
+		[2]byte{SourceXMP, TimestampRecord},
+	}
+
 	return idx.db.Update(func(tx *badger.Txn) error {
-		tx.Delete(key) // nolint
-		key[2] = TimestampRecord
-		tx.Delete(key) // nolint
-		key[1] = SourceEXIF
-		tx.Delete(key) // nolint
-		key[2] = DataRecord
-		tx.Delete(key) // nolint
+		for _, t := range del {
+			nk := make([]byte, len(key))
+			copy(nk, key)
+			copy(nk[1:], t[:])
+			if err := tx.Delete(nk); err != nil {
+				idx.log.WithError(err).Error("error deleting index")
+			}
+		}
+
+		pfx := []byte{indexRecord}
+		opts := badger.DefaultIteratorOptions
+		opts.PrefetchValues = false
+		opts.Prefix = pfx
+		fk := []byte(file)
+		it := tx.NewIterator(opts)
+		defer it.Close()
+		it.Rewind()
+		idx.log.WithField("path", file).WithField("filekey", string(fk)).Trace("deleting search indexes")
+		for it.Seek(pfx); it.ValidForPrefix(pfx); it.Next() {
+			k := it.Item().KeyCopy(nil) // https://github.com/dgraph-io/badger/issues/494#issuecomment-390831885
+			if bytes.HasSuffix(k, fk) {
+				if err := tx.Delete(k); err != nil {
+					idx.log.WithError(err).WithField("k", string(k)).Error("error deleting query index")
+				}
+			}
+		}
+
 		return nil
 	})
 }

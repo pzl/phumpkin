@@ -17,7 +17,6 @@ import (
 	Universal key structure:
 		- first byte is recordType
 		- second byte is XMP or EXIF source
-		- third byte is whether the value is the data, or timestamp
 
 	Primary data:
 	--------------
@@ -34,7 +33,7 @@ import (
 
 	Index Data:
 	-------------
-	key: indexRecord + <sourceType> + <DataType> + []byte(fieldname) + byte(0) + []byte(value) + ?? separator + []byte(fileID)
+	key: indexRecord + <sourceType> + []byte(fieldname) + byte(0) + []byte(value) + ?? separator + []byte(fileID)
 	value: []byte{}
 
 
@@ -135,6 +134,34 @@ func Write(ctx context.Context, sourceType byte, file string, data interface{}, 
 	return db.Update(func(tx *badger.Txn) error {
 		return writeRecords(tx, d, tm, key)
 	})
+}
+
+func WriteIdxField(ctx context.Context, sourceType byte, file string, field string, v []byte, batch *badger.WriteBatch) error {
+	warnIfAbsolute(ctx, []byte(file)[0])
+	db, err := dbHandle(ctx)
+	if err != nil {
+		return err
+	}
+
+	fileb := []byte(file)
+	fieldb := []byte(field)
+
+	key := make([]byte, len(fileb)+len(fieldb)+len(v)+4) // extras are: recordType, sourceType, and 2*null-sep
+	key[0] = indexRecord
+	key[1] = sourceType
+	copy(key[2:], fieldb)
+	key[2+len(fieldb)] = 0
+	copy(key[3+len(fieldb):], v)
+	key[3+len(fieldb)+len(v)] = 0 // ?? separator v could contain ANYTHING
+	copy(key[4+len(fieldb)+len(v):], fileb)
+
+	if batch != nil {
+		return batch.SetEntry(badger.NewEntry(key, nil).WithDiscard())
+	}
+	return db.Update(func(tx *badger.Txn) error {
+		return tx.SetEntry(badger.NewEntry(key, nil).WithDiscard())
+	})
+
 }
 
 /* ---- write helpers ----------- */
