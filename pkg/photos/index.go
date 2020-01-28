@@ -6,6 +6,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/dgraph-io/badger"
@@ -22,7 +23,7 @@ type Indexer struct {
 	db       *badger.DB
 }
 
-// non-recursively index files if necessary (write times checked)
+// index files if necessary (write times checked)
 // relative path given
 func (idx *Indexer) Index(path string, recur bool) {
 	l := idx.log.WithField("path", path)
@@ -48,6 +49,7 @@ func (idx *Indexer) Index(path string, recur bool) {
 	}
 
 	// if dir, do the business for each file
+	var wg sync.WaitGroup
 	batch := idx.db.NewWriteBatch()
 	err = walker.WalkWithContext(idx.ctx, fullpath, func(name string, fi os.FileInfo) error {
 		if fi.IsDir() {
@@ -61,14 +63,19 @@ func (idx *Indexer) Index(path string, recur bool) {
 			return nil
 		}
 		filename := idx.relpath(name)
-		if err := idx.indexFileIfNeeded(filename, batch); err != nil {
-			l.WithField("file", filename).WithError(err).Error("erroring indexing file in path")
-		}
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			if err := idx.indexFileIfNeeded(filename, batch); err != nil {
+				l.WithField("file", filename).WithError(err).Error("erroring indexing file in path")
+			}
+		}()
 		return nil
 	})
 	if err != nil {
 		l.WithError(err).Error("error when crawling path")
 	}
+	wg.Wait()
 	batch.Flush()
 }
 
@@ -87,27 +94,39 @@ func (idx *Indexer) indexFileIfNeeded(file string, batcher *badger.WriteBatch) e
 func (idx *Indexer) indexFile(file string, xmp bool, exif bool, batcher *badger.WriteBatch) error {
 	l := idx.log.WithField("file", file)
 	fullpath := filepath.Join(idx.photoDir, file)
+	var wg sync.WaitGroup
 	if xmp {
-		if x, err := ReadXMPFile(fullpath + ".xmp"); err != nil {
-			l.WithError(err).Error("error reading XMP file")
-		} else {
-			l.Debug("indexing XMP data")
-			if err := Write(idx.ctx, SourceXMP, file, x, batcher); err != nil {
-				l.WithError(err).Error("error writing XMP to db")
+		wg.Add(1)
+		go func() {
+
+			defer wg.Done()
+			if x, err := ReadXMPFile(fullpath + ".xmp"); err != nil {
+				l.WithError(err).Error("error reading XMP file")
+			} else {
+				l.Debug("indexing XMP data")
+				if err := Write(idx.ctx, SourceXMP, file, x, batcher); err != nil {
+					l.WithError(err).Error("error writing XMP to db")
+				}
 			}
-		}
+		}()
 	}
 
 	if exif {
-		if data, err := ReadExifFile(fullpath); err != nil {
-			l.WithError(err).Error("error reading exif")
-		} else {
-			l.Debug("indexing EXIF data")
-			if err := Write(idx.ctx, SourceEXIF, file, data, batcher); err != nil {
-				l.WithError(err).Error("error writing exif to db")
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			if data, err := ReadExifFile(fullpath); err != nil {
+				l.WithError(err).Error("error reading exif")
+			} else {
+				l.Debug("indexing EXIF data")
+				if err := Write(idx.ctx, SourceEXIF, file, data, batcher); err != nil {
+					l.WithError(err).Error("error writing exif to db")
+				}
 			}
-		}
+		}()
 	}
+
+	wg.Wait()
 	return nil
 }
 

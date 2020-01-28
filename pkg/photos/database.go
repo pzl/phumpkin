@@ -91,8 +91,6 @@ func DataKey(file string, source byte) []byte {
 
 func Read(ctx context.Context, key []byte, into interface{}) error {
 	warnIfAbsolute(ctx, key[3])
-	log := logger.LogFromCtx(ctx)
-	log.WithField("key", key).Trace("reading key")
 	db, err := dbHandle(ctx)
 	if err != nil {
 		return err
