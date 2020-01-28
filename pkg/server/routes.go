@@ -30,7 +30,7 @@ func (s *server) routes() {
 	s.router.Route("/api/v1", func(v1 chi.Router) {
 		v1.Use(mstk.APIVer(1))
 		v1.Mount("/photos", s.Photos())
-		v1.Get("/locations", s.PhotoHandler.Locations)
+		v1.Mount("/query", s.Queries())
 		v1.Get("/thumb/{size}/*", s.PhotoHandler.GetThumb)
 		v1.Get("/ws", s.PhotoHandler.Websocket)
 
@@ -65,6 +65,14 @@ func (s *server) Photos() http.Handler {
 
 	r.Get("/", s.PhotoHandler.List)
 	r.Get("/*", s.PhotoHandler.Get)
+
+	return r
+}
+
+func (s *server) Queries() http.Handler {
+	r := chi.NewRouter()
+
+	r.Get("/locations", QueryLocations)
 
 	return r
 }

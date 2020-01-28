@@ -167,7 +167,7 @@ export default {
 		if (server === "http://localhost:3000") {
 			server = "http://localhost:6001"
 		}
-		this.$axios.get(server + '/api/v1/locations')
+		this.$axios.get(server + '/api/v1/query/locations')
 			.then(data => { this.photos = data.data.photos.map(p=>{ p.hovered = 0; return p }) })
 	},
 }
