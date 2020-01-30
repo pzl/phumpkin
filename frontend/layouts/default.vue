@@ -3,7 +3,7 @@
 		<!--<v-system-bar app>Phumpkin</v-system-bar>-->
 
 		<!-- Side bar -->
-		<v-navigation-drawer app v-model="nav_vis">
+		<v-navigation-drawer app v-model="nav_vis" mini-variant mini-variant-width="56" expand-on-hover bottom>
 			<v-list-item>
 				<v-list-item-content>
 					<v-list-item-title class="title d-flex">
@@ -20,7 +20,7 @@
 
 			<v-list dense nav class="d-none d-md-block">
 				<v-list-item-group v-model="nav_selected" color="primary">
-					<v-list-item v-for="(item, i) in nav_items" :key="i" nuxt :to="item.page">
+					<v-list-item v-for="(item, i) in nav_items" :key="i" exact nuxt :to="item.page">
 						<v-list-item-icon>
 							<v-icon v-text="item.icon"></v-icon>
 						</v-list-item-icon>
@@ -55,10 +55,10 @@
 
 		<!-- top bar -->
 		<v-app-bar app dense :collapse-on-scroll="!anySelected" :color="anySelected ? 'primary' : ''" :dark="anySelected" :clipped-right="!navCollapsed">
-			<v-app-bar-nav-icon @click.stop="nav_vis = !nav_vis">
+			<v-app-bar-nav-icon @click.stop="nav_vis = !nav_vis" class="d-block d-md-none" >
 				<v-icon>mdi-{{ nav_vis ? 'backburger' : 'menu' }}</v-icon>
 			</v-app-bar-nav-icon>
-			<v-toolbar-title class="d-none d-md-block" >{{ anySelected ? `${selected.length} Selected` : 'Phumpkin' }}</v-toolbar-title>
+			<v-toolbar-title class="d-none d-md-block" v-if="!navCollapsed" >{{ anySelected ? `${selected.length} Selected` : 'Phumpkin' }}</v-toolbar-title>
 			<v-btn icon v-if="!connected" class="red--text" @click="reconnect">
 				<v-icon small>mdi-lan-disconnect</v-icon>
 			</v-btn>
@@ -184,7 +184,7 @@
 		</v-footer>
 
 		<v-bottom-navigation app class="d-flex d-md-none" :value="nav_selected">
-			<v-btn v-for="(item,i) in nav_items" :key="'btm-nav'+i" nuxt :to="item.page">
+			<v-btn v-for="(item,i) in nav_items" :key="'btm-nav'+i" exact nuxt :to="item.page">
 				<span>{{ item.text }}</span>
 				<v-icon>{{ item.icon }}</v-icon>
 			</v-btn>
@@ -211,10 +211,11 @@ export default {
 			nav_vis: null,
 			nav_selected: 0,
 			nav_items: [
-				{ text: 'Photos', icon: 'mdi-image', page: '/' },
-				{ text: 'Faces', icon: 'mdi-face' },
-				{ text: 'Tags', icon: 'mdi-tag' },
-				{ text: 'Places', icon: 'mdi-map-marker', page: 'map' },
+				{ text: 'Folder', icon: 'mdi-folder-multiple-image', page: '/' },
+				{ text: 'Tags', icon: 'mdi-tag', page: '/tags' },
+				{ text: 'Labels', icon: 'mdi-palette', page: '/labels' },
+				{ text: 'Faces', icon: 'mdi-face', page: '/faces' },
+				{ text: 'Places', icon: 'mdi-map-marker', page: '/map' },
 			],
 			infobar_vis: false,
 			sortables: [
