@@ -83,6 +83,7 @@ func (s *server) Queries() http.Handler {
 	r := chi.NewRouter()
 
 	r.Get("/locations", QueryLocations)
+	r.Get("/labels", QueryColorLabels)
 
 	return r
 }

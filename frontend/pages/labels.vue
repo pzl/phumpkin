@@ -1,22 +1,21 @@
 <template>
-	<div>
-		<v-row no-gutters>
-			<v-navigation-drawer style="height: 90vh">
-				<v-list-group>
-
-				</v-list-group>
-			</v-navigation-drawer>
-			<photo-grid :images="[]" @more="">
-				<template v-slot:before v-if="selected.length">
-					<v-row class="content-group selected-labels" no-gutters>
-						<p>Current Labels:</p>
-						<v-chip v-for="(s,i) in selected" :key="'s'+i" close @click:close="unselect(s,i)">{{s}}</v-chip>
-					</v-row>
-				</template>
-			</photo-grid>
-			
-		</v-row>
-	</div>
+	<v-row no-gutters style="flex-wrap: nowrap;">
+		<v-navigation-drawer style="height: 90vh" mini-variant>
+				<v-list-item-group v-model="selected" multiple color="primary">
+					<v-list-item v-for="(c,i) in labels" :key="i" v-ripple="false" @click="unsetClear">
+						<v-list-item-icon>
+							<v-icon :color="toColor(c)">mdi-circle</v-icon>
+						</v-list-item-icon>
+					</v-list-item>
+					<v-list-item v-ripple="false" @click="clear">
+						<v-list-item-icon>
+							<v-icon>mdi-circle-off-outline</v-icon>
+						</v-list-item-icon>
+					</v-list-item>
+				</v-list-item-group>
+		</v-navigation-drawer>
+		<photo-grid style="max-width: 93%" :images="photos" @more=""></photo-grid>
+	</v-row>
 </template>
 
 <script>
@@ -39,30 +38,44 @@ export default {
 	data() {
 		return {
 			labels: [0,1,2,3,4],
-			current_tags: [],
+			selected: [],
+			photos: [],
 		}
 	},
 	computed: {
-		selected() {
-			return this.current_tags.map(t => find(t,this.tags))
-		},
-		...mapState('images', ['images',  'err', 'loadMore']),
+		...mapState('images', ['err', 'loadMore']),
 	},
 	methods: {
+		clear() {
+			this.$nextTick(() => {
+				this.selected = [5]
+			})
+		},
+		unsetClear() {
+			if (this.selected.indexOf(5) !== -1) {
+				this.$nextTick(() => {
+					this.selected.splice(this.selected.indexOf(5),1)
+				})
+			}
+		},
+		loadWithLabels(lbl) {
+			if (lbl.length === 0) {
+				return []
+			}
+			let server = location.origin
+			if (server === "http://localhost:3000") {
+				server = "http://localhost:6001"
+			}
+			this.$axios.get(server + '/api/v1/query/labels?l='+lbl.join(','))
+				.then(d => { this.photos = d.data.photos })
+		},
 		toColor: toColor,
-		unselect(el, i) {
-			this.current_tags.splice(i,1)
-		},
-		select(items) {
-			this.current_tags = items
-			// reload with current selected tags
-		},
-		...mapMutations('images', ['pushPath']),
 		...mapActions('images', ['loadImages', 'resetImages']),
 	},
-	mounted() {
-		//this.loadTags()
-		//this.loadImages()
+	watch: {
+		selected(val) {
+			this.loadWithLabels(val)
+		}
 	},
 	components: { PhotoGrid }
 }

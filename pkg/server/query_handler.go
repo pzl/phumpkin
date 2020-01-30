@@ -2,6 +2,7 @@ package server
 
 import (
 	"net/http"
+	"strconv"
 	"strings"
 
 	"github.com/go-chi/chi"
@@ -66,5 +67,37 @@ func QueryLocations(w http.ResponseWriter, r *http.Request) {
 	}
 	writeJSON(w, r, map[string]interface{}{
 		"photos": p,
+	})
+}
+
+func QueryColorLabels(w http.ResponseWriter, r *http.Request) {
+	log := logger.GetLog(r)
+	l := r.URL.Query().Get("l")
+	ls := make([]string, 0, 4)
+	for _, s := range strings.Split(l, ",") {
+		if x, err := strconv.Atoi(s); err == nil && x <= 5 {
+			ls = append(ls, s)
+		}
+	}
+
+	p, err := photos.ColorLabels(r.Context(), ls)
+	if err != nil {
+		log.WithError(err).Error("error getting photos with color labels")
+		writeErr(w, 500, err)
+		return
+	}
+
+	count := 30
+	if c, err := strconv.Atoi(r.URL.Query().Get("count")); err == nil {
+		count = c
+	}
+	offset := 0
+	if o, err := strconv.Atoi(r.URL.Query().Get("count")); err == nil {
+		offset = o
+	}
+	ps := PhotoSort(r.URL.Query().Get("sort"), r.URL.Query().Get("sort_dir") != "desc", count, offset, p)
+
+	writeJSON(w, r, map[string]interface{}{
+		"photos": ps,
 	})
 }

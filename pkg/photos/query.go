@@ -130,3 +130,58 @@ func WithLocation(ctx context.Context) ([]Photo, error) {
 
 	return ps, nil
 }
+
+func ColorLabels(ctx context.Context, labels []string) ([]Photo, error) {
+	db := ctx.Value("badger").(*badger.DB)
+	photoDir := ctx.Value("photoDir").(string)
+
+	lmap := make(map[string]struct{}, len(labels))
+	for _, l := range labels {
+		lmap[l] = struct{}{}
+	}
+
+	pmap := make(map[string]struct{})
+	pfx := []byte{indexRecord, SourceXMP, 'c', 'o', 'l', 'o', 'r', '_', 'l', 'a', 'b', 'e', 'l', 's', 0}
+	opts := badger.DefaultIteratorOptions
+	opts.PrefetchValues = false
+	opts.Prefix = pfx
+	err := db.View(func(tx *badger.Txn) error {
+		it := tx.NewIterator(opts)
+		defer it.Close()
+		it.Rewind()
+		for it.Seek(pfx); it.ValidForPrefix(pfx); it.Next() {
+			k := it.Item().Key()
+
+			vstart := bytes.IndexByte(k, 0)
+			if vstart == -1 {
+				continue
+			}
+
+			vend := bytes.LastIndexByte(k, 0)
+			if vend == -1 {
+				continue
+			}
+
+			v := string(k[vstart+1 : vend])
+			if _, ok := lmap[v]; ok {
+				fname := string(k[vend+1:])
+				pmap[fname] = struct{}{}
+			}
+		}
+		return nil
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	ps := make([]Photo, 0, len(pmap))
+	for k := range pmap {
+		p, err := FromSrc(ctx, photoDir+"/"+k)
+		if err != nil {
+			return nil, err
+		}
+		ps = append(ps, p)
+	}
+
+	return ps, nil
+}

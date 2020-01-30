@@ -32,7 +32,7 @@ import (
 
 	Index Data:
 	-------------
-	key: indexRecord + <sourceType> + []byte(fieldname) + byte(0) + []byte(value) + ?? separator + []byte(fileID)
+	key: indexRecord + <sourceType> + []byte(fieldname) + 0 + []byte(value) + 0 + []byte(fileID)
 	value: []byte{}
 
 
