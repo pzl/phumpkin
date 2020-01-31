@@ -107,3 +107,42 @@ func QueryColorLabels(w http.ResponseWriter, r *http.Request) {
 		"photos": ps,
 	})
 }
+
+func QueryTags(w http.ResponseWriter, r *http.Request) {
+	log := logger.GetLog(r)
+	tags := make([]string, 0, 5)
+	for _, t := range strings.Split(r.URL.Query().Get("t"), ",") {
+		if t != "" {
+			tags = append(tags, t)
+		}
+	}
+
+	if len(tags) == 0 {
+		writeJSON(w, r, map[string][]string{
+			"photos": []string{},
+		})
+		return
+	}
+
+	p, err := photos.ByTags(r.Context(), tags)
+	if err != nil {
+		log.WithError(err).Error("error getting photos by tags")
+		writeErr(w, 500, err)
+		return
+	}
+
+	count := 30
+	if c, err := strconv.Atoi(r.URL.Query().Get("count")); err == nil {
+		count = c
+	}
+	offset := 0
+	if o, err := strconv.Atoi(r.URL.Query().Get("offset")); err == nil {
+		offset = o
+	}
+	ps := PhotoSort(r.URL.Query().Get("sort"), r.URL.Query().Get("sort_dir") != "desc", count, offset, p)
+
+	writeJSON(w, r, map[string]interface{}{
+		"photos": ps,
+	})
+
+}

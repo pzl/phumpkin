@@ -84,6 +84,7 @@ func (s *server) Queries() http.Handler {
 
 	r.Get("/locations", QueryLocations)
 	r.Get("/labels", QueryColorLabels)
+	r.Get("/tags", QueryTags)
 
 	return r
 }
