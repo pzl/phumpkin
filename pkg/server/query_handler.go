@@ -79,6 +79,12 @@ func QueryColorLabels(w http.ResponseWriter, r *http.Request) {
 			ls = append(ls, s)
 		}
 	}
+	if len(ls) == 0 {
+		writeJSON(w, r, map[string][]string{
+			"photos": []string{},
+		})
+		return
+	}
 
 	p, err := photos.ColorLabels(r.Context(), ls)
 	if err != nil {
