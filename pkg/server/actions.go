@@ -100,49 +100,9 @@ func (a Action) List(ctx context.Context, lr ListReq) ([]photos.Photo, []string,
 	<-done // wait for dirs loop
 	<-done // wait for photos loop
 
-	if lr.Sort != "" {
-		sort.SliceStable(files, func(i, j int) bool {
-			// @todo: give frontend more control in here with an embedded execution string. JS or lua, etc
-			switch strings.ToLower(lr.Sort) {
-			case "name":
-				if lr.Asc {
-					return files[i].Relpath() < files[j].Relpath()
-				} else {
-					return files[i].Relpath() > files[j].Relpath()
-				}
-			case "date taken":
-				srt := false
-				files[i].Ex_if_string("DateTimeOriginal", func(a string) {
-					files[j].Ex_if_string("DateTimeOriginal", func(b string) {
-						if lr.Asc {
-							srt = a < b
-						} else {
-							srt = a > b
-						}
-					})
-				})
-				return srt
-			case "rating":
-				if lr.Asc {
-					return files[i].MetaInt("Rating") < files[j].MetaInt("Rating")
-				} else {
-					return files[i].MetaInt("Rating") > files[j].MetaInt("Rating")
-				}
-			}
-
-			return false
-		})
-	}
-
-	if lr.Count <= 0 {
-		lr.Count = 30
-	}
-	if lr.Offset < 0 {
-		lr.Offset = 0
-	}
-
+	ps := PhotoSort(lr.Sort, lr.Asc, lr.Count, lr.Offset, files)
 	sort.Strings(dirs)
-	return files[lr.Offset:min(lr.Offset+lr.Count, len(files))], dirs, nil
+	return ps, dirs, nil
 }
 
 type SizeReq struct {
@@ -259,6 +219,49 @@ func (a Action) GetSize(ctx context.Context, sr SizeReq) (string, error) {
 		return "", err
 	}
 	return base64.StdEncoding.EncodeToString(data), nil
+}
+
+func PhotoSort(sortby string, asc bool, count int, offset int, ps []photos.Photo) []photos.Photo {
+	sort.SliceStable(ps, func(i, j int) bool {
+		// @todo: give frontend more control in here with an embedded execution string. JS or lua, etc
+		switch strings.ToLower(sortby) {
+		case "name", "":
+			if asc {
+				return ps[i].Relpath() < ps[j].Relpath()
+			} else {
+				return ps[i].Relpath() > ps[j].Relpath()
+			}
+		case "date taken":
+			srt := false
+			ps[i].Ex_if_string("DateTimeOriginal", func(a string) {
+				ps[j].Ex_if_string("DateTimeOriginal", func(b string) {
+					if asc {
+						srt = a < b
+					} else {
+						srt = a > b
+					}
+				})
+			})
+			return srt
+		case "rating":
+			if asc {
+				return ps[i].MetaInt("Rating") < ps[j].MetaInt("Rating")
+			} else {
+				return ps[i].MetaInt("Rating") > ps[j].MetaInt("Rating")
+			}
+		}
+
+		return false
+	})
+
+	if count <= 0 {
+		count = 30
+	}
+	if offset < 0 {
+		offset = 0
+	}
+
+	return ps[offset:min(offset+count, len(ps))]
 }
 
 func min(a, b int) int {

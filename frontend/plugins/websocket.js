@@ -2,13 +2,13 @@ export default ({ app, store }, inject) => {
 	const pending = {}
 	let redies = []
 	let nextID = 1
-	let init_connect = false
-
+	let initialConnect = false
 
 	const onopen = event => {
 		store.commit('socket/setConnected')
 		console.log("socket opened")
 		console.log(event)
+		initialConnect = true
 
 		event.target.onmessage = onmessage
 		event.target.onclose = onclose
@@ -48,21 +48,21 @@ export default ({ app, store }, inject) => {
 
 	const t = {
 		sock: null,
-		reconnect: function(){
+		reconnect () {
 			// location.origin.replace(/^http/,"ws")+"/api..."
 			let server = location.origin
 			if (server === "http://localhost:3000") {
 				// @todo: remove local dev hack
 				server = "http://localhost:6001"
 			}
-			server = server.replace(/^http/,"ws")
-			this.sock = new WebSocket(server+"/api/v1/ws")
+			server = server.replace(/^http/, "ws")
+			this.sock = new WebSocket(server + "/api/v1/ws")
 			this.sock.onopen = onopen
 		},
-		send: function(data) {
+		send (data) {
 			if (this.sock === null || this.sock.readyState !== 1) {
 				return new Promise((resolve, reject) => {
-					reject("sock not ready")
+					reject(new Error("sock not ready"))
 				})
 			}
 
@@ -70,33 +70,28 @@ export default ({ app, store }, inject) => {
 			if (!("_id" in data)) {
 				data._id = nextID++
 			}
-			data._id = ""+data._id
-
+			data._id = "" + data._id
 
 			// save the ID for calling back
 			const id = data._id
 			this.sock.send(JSON.stringify(data))
 			return new Promise((resolve, reject) => {
-				pending[id] = {resolve:resolve,reject:reject}
+				pending[id] = { resolve, reject }
 			})
 		},
-		connected: function() {
+		connected () {
 			return this.sock.readyState === 1
 		},
-		onready: function() {
-			if (init_connect) {
+		onready () {
+			if (initialConnect) {
 				return new Promise((resolve, reject) => { resolve() })
 			}
 			return new Promise((resolve, reject) => {
-				redies.push({resolve:resolve, reject:reject})
+				redies.push({ resolve, reject })
 			})
 		},
 	}
 	t.reconnect()
 
 	inject('sock', t)
-}
-
-function reconnect() {
-
 }

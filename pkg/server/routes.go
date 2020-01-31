@@ -31,6 +31,7 @@ func (s *server) routes() {
 		v1.Use(mstk.APIVer(1))
 		v1.Mount("/photos", s.Photos())
 		v1.Mount("/query", s.Queries())
+		v1.Mount("/complete/", s.Typeahead())
 		v1.Get("/thumb/{size}/*", s.PhotoHandler.GetThumb)
 		v1.Get("/ws", s.PhotoHandler.Websocket)
 
@@ -69,10 +70,22 @@ func (s *server) Photos() http.Handler {
 	return r
 }
 
+func (s *server) Typeahead() http.Handler {
+	r := chi.NewRouter()
+	r.Route("/{source}", func(rs chi.Router) {
+		rs.Get("/field", AutoCompleteField)
+		rs.Get("/value", AutoCompleteValue)
+	})
+	return r
+}
+
 func (s *server) Queries() http.Handler {
 	r := chi.NewRouter()
 
 	r.Get("/locations", QueryLocations)
+	r.Get("/labels", QueryColorLabels)
+	r.Get("/tags", QueryTags)
+	r.Get("/faces", QueryFaces)
 
 	return r
 }

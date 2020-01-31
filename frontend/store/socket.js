@@ -3,6 +3,6 @@ export const state = () => ({
 })
 
 export const mutations = {
-	setConnected(state) { state.connected = true },
-	setDisconnected(state) { state.connected = false },
+	setConnected (state) { state.connected = true },
+	setDisconnected (state) { state.connected = false },
 }

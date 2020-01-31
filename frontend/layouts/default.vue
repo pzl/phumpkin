@@ -3,7 +3,7 @@
 		<!--<v-system-bar app>Phumpkin</v-system-bar>-->
 
 		<!-- Side bar -->
-		<v-navigation-drawer app v-model="nav_vis">
+		<v-navigation-drawer app v-model="nav_vis" mini-variant mini-variant-width="56" expand-on-hover bottom>
 			<v-list-item>
 				<v-list-item-content>
 					<v-list-item-title class="title d-flex">
@@ -20,7 +20,7 @@
 
 			<v-list dense nav class="d-none d-md-block">
 				<v-list-item-group v-model="nav_selected" color="primary">
-					<v-list-item v-for="(item, i) in nav_items" :key="i" nuxt :to="item.page">
+					<v-list-item v-for="(item, i) in nav_items" :key="i" exact nuxt :to="item.page">
 						<v-list-item-icon>
 							<v-icon v-text="item.icon"></v-icon>
 						</v-list-item-icon>
@@ -55,10 +55,10 @@
 
 		<!-- top bar -->
 		<v-app-bar app dense :collapse-on-scroll="!anySelected" :color="anySelected ? 'primary' : ''" :dark="anySelected" :clipped-right="!navCollapsed">
-			<v-app-bar-nav-icon @click.stop="nav_vis = !nav_vis">
+			<v-app-bar-nav-icon @click.stop="nav_vis = !nav_vis" class="d-block d-md-none" >
 				<v-icon>mdi-{{ nav_vis ? 'backburger' : 'menu' }}</v-icon>
 			</v-app-bar-nav-icon>
-			<v-toolbar-title class="d-none d-md-block" >{{ anySelected ? `${selected.length} Selected` : 'Phumpkin' }}</v-toolbar-title>
+			<v-toolbar-title class="d-none d-md-block" v-if="!navCollapsed" >{{ anySelected ? `${selected.length} Selected` : 'Phumpkin' }}</v-toolbar-title>
 			<v-btn icon v-if="!connected" class="red--text" @click="reconnect">
 				<v-icon small>mdi-lan-disconnect</v-icon>
 			</v-btn>
@@ -129,13 +129,13 @@
 					</v-btn>
 				</template>
 				<v-list dense>
-					<v-list-item-group v-model="sort_by">
-						<v-list-item v-for="(sort, i) in sortables" :key="i" @click="sort_change(sort.text)">
+					<v-list-item-group v-model="sort">
+						<v-list-item v-for="(s, i) in sortables" :key="s.text">
 							<v-list-item-content>
-								<v-list-item-title v-text="sort.text"></v-list-item-title>
+								<v-list-item-title v-text="s.text"></v-list-item-title>
 							</v-list-item-content>
 							<v-list-item-icon>
-								<v-icon v-text="sort.icon"></v-icon>
+								<v-icon v-text="s.icon"></v-icon>
 							</v-list-item-icon>
 						</v-list-item>
 					</v-list-item-group>
@@ -184,7 +184,7 @@
 		</v-footer>
 
 		<v-bottom-navigation app class="d-flex d-md-none" :value="nav_selected">
-			<v-btn v-for="(item,i) in nav_items" :key="'btm-nav'+i" nuxt :to="item.page">
+			<v-btn v-for="(item,i) in nav_items" :key="'btm-nav'+i" exact nuxt :to="item.page">
 				<span>{{ item.text }}</span>
 				<v-icon>{{ item.icon }}</v-icon>
 			</v-btn>
@@ -211,18 +211,13 @@ export default {
 			nav_vis: null,
 			nav_selected: 0,
 			nav_items: [
-				{ text: 'Photos', icon: 'mdi-image', page: '/' },
-				{ text: 'Faces', icon: 'mdi-face' },
-				{ text: 'Tags', icon: 'mdi-tag' },
-				{ text: 'Places', icon: 'mdi-map-marker', page: 'map' },
+				{ text: 'Folder', icon: 'mdi-folder-multiple-image', page: '/' },
+				{ text: 'Tags', icon: 'mdi-tag', page: '/tags' },
+				{ text: 'Labels', icon: 'mdi-palette', page: '/labels' },
+				{ text: 'Faces', icon: 'mdi-face', page: '/faces' },
+				{ text: 'Places', icon: 'mdi-map-marker', page: '/map' },
 			],
 			infobar_vis: false,
-			sortables: [
-				{ text: 'Rating', icon: 'mdi-star-half' },
-				{ text: 'Date Taken', icon: 'mdi-calendar-clock' },
-				{ text: 'Name', icon: 'mdi-sort-alphabetical' },
-			],
-			sort_by: 0,
 			show_search: false,
 			scrolled: false,
 			toast: {
@@ -242,11 +237,17 @@ export default {
 		anySelected() { return !!this.$store.state.images.selected.length },
 		navCollapsed() { return this.scrolled && !this.anySelected },
 		infoCollapsed() { return this.infobar_vis && this.anySelected },
-		selected_image() {
-			return this.selected.map(i => this.images[i])
-		},
+		selected_image() { return this.selected.map(i => this.images[i]) },
 		bg() { return (this.$vuetify.theme.dark) ? '#424242' : '#fafafa' },
-		...mapState('images', ['images','selected','sort','sort_asc']),
+		sort: {
+			get() {
+				return this.$store.state.images.sort
+			},
+			set(val) {
+				this.sortBy(val)
+			}
+		},
+		...mapState('images', ['images','selected','sort_asc', 'sortables']),
 		...mapState('socket',['connected']),
 		...mapState('interface', ['display_scale', 'layers', 'active_layers']),
 	},
@@ -259,10 +260,6 @@ export default {
 			this.scrolled = top > 0
 		},
 		reconnect() { this.$sock.reconnect() },
-		sort_change(v) {
-			this.sortBy(v)
-			this.resetImages()
-		},
 		flipSortDir() {
 			this.sortDir(!this.sort_asc)
 			this.resetImages()

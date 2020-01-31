@@ -1,5 +1,5 @@
 <template>
-	<div class="path-crumbs" v-if="this.path.length > 0">
+	<div class="path-crumbs" v-if="path.length > 0">
 		<v-breadcrumbs :items="items" >
 			<template v-slot:item="props">
 				<v-breadcrumbs-item  :tag="props.item.last ?undefined:'a'" @click="click(props.item)">{{props.item.text}}</v-breadcrumbs-item>
@@ -12,6 +12,9 @@
 import { mapState, mapMutations, mapActions } from 'vuex'
 
 export default {
+	props: {
+		path: {}
+	},
 	computed: {
 		items() {
 			return ['root'].concat(this.path).map((p,i) => {
@@ -22,7 +25,6 @@ export default {
 				}
 			})
 		},
-		...mapState('images', ['path'])
 	},
 	methods: {
 		click(item) {
@@ -30,17 +32,13 @@ export default {
 				return null
 			}
 			if (item.i === 0) {
-				this.clearPath()
-				this.resetImages()
+				this.$emit('clear')
 				return
 			}
 			while (this.path[this.path.length-1] !== item.text) {
-				this.popPath()
+				this.$emit('pop')
 			}
-			this.resetImages()
 		},
-		...mapMutations('images', ['clearPath', 'popPath']),
-		...mapActions('images', ['resetImages']),
 	}
 }
 </script>
