@@ -98,7 +98,7 @@ func QueryColorLabels(w http.ResponseWriter, r *http.Request) {
 		count = c
 	}
 	offset := 0
-	if o, err := strconv.Atoi(r.URL.Query().Get("count")); err == nil {
+	if o, err := strconv.Atoi(r.URL.Query().Get("offset")); err == nil {
 		offset = o
 	}
 	ps := PhotoSort(r.URL.Query().Get("sort"), r.URL.Query().Get("sort_dir") != "desc", count, offset, p)
