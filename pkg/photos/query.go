@@ -6,6 +6,7 @@ import (
 	"sort"
 
 	"github.com/dgraph-io/badger"
+	"github.com/pzl/mstk/logger"
 )
 
 func GetFields(ctx context.Context, source byte, partial string) ([]string, error) {
@@ -90,6 +91,7 @@ func GetValues(ctx context.Context, source byte, field string, partial string) (
 }
 
 func WithLocation(ctx context.Context) ([]Photo, error) {
+	log := logger.LogFromCtx(ctx)
 	db := ctx.Value("badger").(*badger.DB)
 	photoDir := ctx.Value("photoDir").(string)
 
@@ -123,7 +125,8 @@ func WithLocation(ctx context.Context) ([]Photo, error) {
 	for k := range pmap {
 		p, err := FromSrc(ctx, photoDir+"/"+k)
 		if err != nil {
-			return nil, err
+			log.WithError(err).Error("error converting index result to photo")
+			continue
 		}
 		ps = append(ps, p)
 	}
@@ -132,6 +135,7 @@ func WithLocation(ctx context.Context) ([]Photo, error) {
 }
 
 func ColorLabels(ctx context.Context, labels []string) ([]Photo, error) {
+	log := logger.LogFromCtx(ctx)
 	db := ctx.Value("badger").(*badger.DB)
 	photoDir := ctx.Value("photoDir").(string)
 
@@ -178,7 +182,8 @@ func ColorLabels(ctx context.Context, labels []string) ([]Photo, error) {
 	for k := range pmap {
 		p, err := FromSrc(ctx, photoDir+"/"+k)
 		if err != nil {
-			return nil, err
+			log.WithError(err).Error("error converting index result to photo")
+			continue
 		}
 		ps = append(ps, p)
 	}
@@ -187,6 +192,7 @@ func ColorLabels(ctx context.Context, labels []string) ([]Photo, error) {
 }
 
 func ByTags(ctx context.Context, tags []string) ([]Photo, error) {
+	log := logger.LogFromCtx(ctx)
 	db := ctx.Value("badger").(*badger.DB)
 	photoDir := ctx.Value("photoDir").(string)
 
@@ -230,7 +236,8 @@ func ByTags(ctx context.Context, tags []string) ([]Photo, error) {
 	for k := range pmap {
 		p, err := FromSrc(ctx, photoDir+"/"+k)
 		if err != nil {
-			return nil, err
+			log.WithError(err).Error("error converting index result to photo")
+			continue
 		}
 		ps = append(ps, p)
 	}
