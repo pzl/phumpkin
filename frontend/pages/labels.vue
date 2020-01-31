@@ -1,6 +1,6 @@
 <template>
 	<v-row no-gutters style="flex-wrap: nowrap;">
-		<v-navigation-drawer style="height: 90vh" mini-variant>
+		<v-navigation-drawer style="height: 90vh; flex-shrink: 0" mini-variant>
 				<v-list-item-group v-model="selected" multiple color="primary">
 					<v-list-item v-for="(c,i) in labels" :key="i" v-ripple="false">
 						<v-list-item-icon>
@@ -16,7 +16,7 @@
 					</v-list-item>
 				</v-list-item-group>
 		</v-navigation-drawer>
-		<photo-grid style="max-width: 93%" :images="images" @more="loadImages(url)"></photo-grid>
+		<photo-grid :images="images" @more="loadImages(url)"></photo-grid>
 	</v-row>
 </template>
 
