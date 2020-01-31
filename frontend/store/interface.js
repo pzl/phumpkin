@@ -10,8 +10,8 @@ export const state = () => ({
 })
 
 export const mutations = {
-	scale(state, val) { state.display_scale = val },
-	setActiveLayers(state, val) { state.active_layers = val },
+	scale (state, val) { state.display_scale = val },
+	setActiveLayers (state, val) { state.active_layers = val },
 
 }
 
