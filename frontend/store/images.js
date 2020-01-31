@@ -41,12 +41,11 @@ export const mutations = {
 }
 
 export const actions = {
-	loadImages ({ commit, state }) {
+	loadImages ({ commit, state }, url) {
 		commit('startLoading')
 		commit('clearErr')
 
-		let p
-
+		/*
 		if (this.$sock.connected()) {
 			p = this.$sock.send({
 					action: "list",
@@ -59,27 +58,15 @@ export const actions = {
 					}
 				})
 		} else {
-			// fall back to HTTP
-			let server = location.origin
-			if (server === "http://localhost:3000") {
-				// @todo: remove local dev hack
-				server = "http://localhost:6001"
-			}
-			p = this.$axios.$get(
-				server + "/api/v1/photos?" +
-					"count=30&" +
-					"offset=" + (state.images.length || 0) + "&" +
-					"sort=" + state.sort + "&" +
-					"sort_dir=" + (state.sort_asc ? 'asc' : 'desc') + "&" +
-					"path=" + state.path.join('/')
-			)
-		}
-		p.then(data => {
-			if (data.photos.length === 0) {
+		*/
+		const p = this.$fetch(url).then(d => d.data)
+		//}
+		p.then(d => {
+			if (d.photos.length === 0) {
 				commit('setLoadMore', false)
 			}
-			commit('addImages', data.photos)
-			commit('setDirs', data.dirs)
+			commit('addImages', d.photos)
+			commit('setDirs', d.dirs)
 		})
 		.catch(error => {
 			console.log('load image error: ')

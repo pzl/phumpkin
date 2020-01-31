@@ -1,5 +1,5 @@
 <template>
-	<photo-grid :images="images" @more="loadImages">
+	<photo-grid :images="images" @more="loadImages(url)">
 		<template v-slot:before>
 			<v-row class="content-group">
 				<path-crumbs :path="path" @clear="clearPath" @pop="popPath" />
@@ -35,10 +35,7 @@ export default {
 		popPath () { return this.path.pop() },
 		onDirClick(dir, e) {
 			e.preventDefault()
-
 			this.pushPath(dir)
-			this.resetImages()
-			this.loadImages()
 		},
 		...mapActions('images', ['loadImages', 'resetImages']),
 	},
@@ -48,7 +45,7 @@ export default {
 		}
 	},
 	mounted() {
-		this.loadImages()
+		this.loadImages(this.url)
 	},
 	components: { PhotoGrid, Directory, PathCrumbs }
 }

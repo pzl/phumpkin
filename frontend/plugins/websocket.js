@@ -2,12 +2,13 @@ export default ({ app, store }, inject) => {
 	const pending = {}
 	let redies = []
 	let nextID = 1
-	let init_connect = false
+	let initialConnect = false
 
 	const onopen = event => {
 		store.commit('socket/setConnected')
 		console.log("socket opened")
 		console.log(event)
+		initialConnect = true
 
 		event.target.onmessage = onmessage
 		event.target.onclose = onclose
@@ -54,8 +55,8 @@ export default ({ app, store }, inject) => {
 				// @todo: remove local dev hack
 				server = "http://localhost:6001"
 			}
-			server = server.replace(/^http/,"ws")
-			this.sock = new WebSocket(server+"/api/v1/ws")
+			server = server.replace(/^http/, "ws")
+			this.sock = new WebSocket(server + "/api/v1/ws")
 			this.sock.onopen = onopen
 		},
 		send (data) {
@@ -82,7 +83,7 @@ export default ({ app, store }, inject) => {
 			return this.sock.readyState === 1
 		},
 		onready () {
-			if (init_connect) {
+			if (initialConnect) {
 				return new Promise((resolve, reject) => { resolve() })
 			}
 			return new Promise((resolve, reject) => {

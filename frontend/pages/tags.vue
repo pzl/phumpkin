@@ -69,11 +69,7 @@ export default {
 	},
 	methods: {
 		loadTags(){
-			let server = location.origin
-			if (server === "http://localhost:3000") {
-				server = "http://localhost:6001"
-			}
-			this.$axios.get(server + '/api/v1/complete/xmp/value?field=tags')
+			this.$fetch('/api/v1/complete/xmp/value?field=tags')
 				.then(d => {
 					let id=0
 					let tags  = d.data.values.map(t => 

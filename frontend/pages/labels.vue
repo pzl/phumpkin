@@ -16,7 +16,7 @@
 					</v-list-item>
 				</v-list-item-group>
 		</v-navigation-drawer>
-		<photo-grid style="max-width: 93%" :images="photos" @more=""></photo-grid>
+		<photo-grid style="max-width: 93%" :images="images" @more="loadImages(url)"></photo-grid>
 	</v-row>
 </template>
 
@@ -41,35 +41,23 @@ export default {
 		return {
 			labels: [0,1,2,3,4],
 			selected: [],
-			photos: [],
 		}
 	},
 	computed: {
-		...mapState('images', ['err', 'loadMore']),
+		url(){ return "/api/v1/query/labels?l=" + this.selected.join(',') },
+		...mapState('images', ['err', 'images']),
 	},
 	methods: {
-		clear() {
-
-		},
-		loadWithLabels(lbl) {
-			if (lbl.length === 0) {
-				this.photos = []
-				return
-			}
-			let server = location.origin
-			if (server === "http://localhost:3000") {
-				server = "http://localhost:6001"
-			}
-			this.$axios.get(server + '/api/v1/query/labels?l='+lbl.join(','))
-				.then(d => { this.photos = d.data.photos })
-		},
 		toColor: toColor,
 		...mapActions('images', ['loadImages', 'resetImages']),
 	},
 	watch: {
-		selected(val) {
-			this.loadWithLabels(val)
+		selected() {
+			this.resetImages()
 		}
+	},
+	mounted() {
+		this.resetImages()
 	},
 	components: { PhotoGrid }
 }
