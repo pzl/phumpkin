@@ -141,7 +141,7 @@
 					</v-list-item-group>
 				</v-list>
 			</v-menu>
-			<v-btn icon @click="flipSortDir" small title="Sort Direction">
+			<v-btn icon @click="sort_asc = !sort_asc" small title="Sort Direction">
 				<v-icon>mdi-sort-{{ sort_asc ? 'a' : 'de' }}scending</v-icon>
 			</v-btn>
 			<!--
@@ -247,7 +247,15 @@ export default {
 				this.sortBy(val)
 			}
 		},
-		...mapState('images', ['images','selected','sort_asc', 'sortables']),
+		sort_asc: {
+			get() {
+				return this.$store.state.images.sort_asc
+			},
+			set(val) {
+				this.sortDir(val)
+			}
+		},
+		...mapState('images', ['images','selected', 'sortables']),
 		...mapState('socket',['connected']),
 		...mapState('interface', ['display_scale', 'layers', 'active_layers']),
 	},
@@ -260,10 +268,6 @@ export default {
 			this.scrolled = top > 0
 		},
 		reconnect() { this.$sock.reconnect() },
-		flipSortDir() {
-			this.sortDir(!this.sort_asc)
-			this.resetImages()
-		},
 		showSizeMenu(e) {
 			e.preventDefault()
 
@@ -289,6 +293,8 @@ export default {
 		...mapActions('images', ['resetImages'])
 	},
 	watch: {
+		sort_asc() { this.resetImages() },
+		sort() { this.resetImages() },
 		darkness(val) { this.$vuetify.theme.dark = val },
 		connected(val) {
 			if (!val) {
