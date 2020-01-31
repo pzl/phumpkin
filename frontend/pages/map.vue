@@ -6,10 +6,11 @@
 
 
 <script>
-import { geoMercator, geoPath, merge, mesh } from 'd3-geo'
+import { geoMercator, geoPath } from 'd3-geo'
 import { event, select } from 'd3-selection'
 import { zoom, zoomIdentity } from 'd3-zoom'
 import { tile, tileWrap } from 'd3-tile'
+import { merge, mesh } from 'topojson-client'
 
 function geoConvert(dms) {
 	let m
@@ -43,8 +44,8 @@ export default {
 			width: w,
 			height: h,
 			t: {
-				x: w/2, // initial x translation
-				y: h/2, // initial y translation
+				x: 0, // initial x translation
+				y: 0, // initial y translation
 				k: 1 // initial scale
 			},
 			photos: [],
@@ -115,11 +116,13 @@ export default {
 		draw() {
 			this.ctx.clearRect(0,0,this.width, this.height)
 			this.ctx.save()
-			
+		
+			/*	
 			if (this.t) {
 				this.ctx.translate(this.t.x, this.t.y)
 				this.ctx.scale(this.t.k, this.t.k)
 			}
+			*/
 
 			// draw basic map
 			this.ctx.beginPath()
@@ -144,7 +147,7 @@ export default {
 				zoomIdentity
 					.translate(this.width/2, this.height/2)
 			)
-		this.$axios.get('/countries-10m.json').then(d => {
+		this.$axios.get('/countries-110m.json').then(d => {
 			this.landData = merge(d.data, d.data.objects.countries.geometries)
 			this.boundary = mesh(d.data, d.data.objects.countries, (a,b) => a !== b)
 			this.draw()
