@@ -244,3 +244,49 @@ func ByTags(ctx context.Context, tags []string) ([]Photo, error) {
 
 	return ps, nil
 }
+
+func HasFace(ctx context.Context) ([]Photo, error) {
+	log := logger.LogFromCtx(ctx)
+	db := ctx.Value("badger").(*badger.DB)
+	photoDir := ctx.Value("photoDir").(string)
+
+	pmap := make(map[string]struct{})
+	pfx := []byte{indexRecord, SourceEXIF, 'F', 'a', 'c', 'e', 's', 'D', 'e', 't', 'e', 'c', 't', 'e', 'd', 0}
+	opts := badger.DefaultIteratorOptions
+	opts.PrefetchValues = false
+	opts.Prefix = pfx
+	err := db.View(func(tx *badger.Txn) error {
+		it := tx.NewIterator(opts)
+		defer it.Close()
+		it.Rewind()
+		for it.Seek(pfx); it.ValidForPrefix(pfx); it.Next() {
+			k := it.Item().Key()
+
+			if k[len(pfx)] != '0' {
+				spl := bytes.LastIndexByte(k, 0)
+				if spl == -1 {
+					continue
+				}
+
+				fname := string(k[spl+1:])
+				pmap[fname] = struct{}{}
+			}
+		}
+		return nil
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	ps := make([]Photo, 0, len(pmap))
+	for k := range pmap {
+		p, err := FromSrc(ctx, photoDir+"/"+k)
+		if err != nil {
+			log.WithError(err).Error("error converting index result to photo")
+			continue
+		}
+		ps = append(ps, p)
+	}
+
+	return ps, nil
+}

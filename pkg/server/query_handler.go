@@ -146,3 +146,29 @@ func QueryTags(w http.ResponseWriter, r *http.Request) {
 	})
 
 }
+
+func QueryFaces(w http.ResponseWriter, r *http.Request) {
+	log := logger.GetLog(r)
+
+	p, err := photos.HasFace(r.Context())
+	if err != nil {
+		log.WithError(err).Error("error getting photos with faces")
+		writeErr(w, 500, err)
+		return
+	}
+
+	count := 30
+	if c, err := strconv.Atoi(r.URL.Query().Get("count")); err == nil {
+		count = c
+	}
+	offset := 0
+	if o, err := strconv.Atoi(r.URL.Query().Get("offset")); err == nil {
+		offset = o
+	}
+	ps := PhotoSort(r.URL.Query().Get("sort"), r.URL.Query().Get("sort_dir") != "desc", count, offset, p)
+
+	writeJSON(w, r, map[string]interface{}{
+		"photos": ps,
+	})
+
+}
