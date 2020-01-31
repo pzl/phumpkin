@@ -2,12 +2,14 @@
 	<v-row no-gutters style="flex-wrap: nowrap;">
 		<v-navigation-drawer style="height: 90vh" mini-variant>
 				<v-list-item-group v-model="selected" multiple color="primary">
-					<v-list-item v-for="(c,i) in labels" :key="i" v-ripple="false" @click="unsetClear">
+					<v-list-item v-for="(c,i) in labels" :key="i" v-ripple="false">
 						<v-list-item-icon>
 							<v-icon :color="toColor(c)">mdi-circle</v-icon>
 						</v-list-item-icon>
 					</v-list-item>
-					<v-list-item v-ripple="false" @click="clear">
+				</v-list-item-group>
+				<v-list-item-group :value="[]">
+					<v-list-item  @click="selected=[]" v-ripple="false">
 						<v-list-item-icon>
 							<v-icon>mdi-circle-off-outline</v-icon>
 						</v-list-item-icon>
@@ -47,20 +49,12 @@ export default {
 	},
 	methods: {
 		clear() {
-			this.$nextTick(() => {
-				this.selected = [5]
-			})
-		},
-		unsetClear() {
-			if (this.selected.indexOf(5) !== -1) {
-				this.$nextTick(() => {
-					this.selected.splice(this.selected.indexOf(5),1)
-				})
-			}
+
 		},
 		loadWithLabels(lbl) {
 			if (lbl.length === 0) {
-				return []
+				this.photos = []
+				return
 			}
 			let server = location.origin
 			if (server === "http://localhost:3000") {
