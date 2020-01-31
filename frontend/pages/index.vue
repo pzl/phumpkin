@@ -2,7 +2,7 @@
 	<photo-grid :images="images" @more="loadImages">
 		<template v-slot:before>
 			<v-row class="content-group">
-				<path-crumbs />
+				<path-crumbs :path="path" @clear="clearPath" @pop="popPath" />
 			</v-row>
 			<v-row class="content-group">
 				<directory v-for="(d,i) in dirs" :key="d+i" :name="d" @click="onDirClick(d, $event)" />
@@ -20,12 +20,19 @@ import { mapState, mapMutations, mapActions } from 'vuex'
 export default {
 	data() {
 		return {
+			path: []
 		}
 	},
 	computed: {
+		url() {
+			return "/api/v1/photos/?path=" + this.path.join('/')
+		},
 		...mapState('images', ['images', 'dirs', 'selected', 'loading', 'err', 'loadMore']),
 	},
 	methods: {
+		pushPath(d) { this.path.push(d) },
+		clearPath () { this.path = [] },
+		popPath () { return this.path.pop() },
 		onDirClick(dir, e) {
 			e.preventDefault()
 
@@ -33,8 +40,12 @@ export default {
 			this.resetImages()
 			this.loadImages()
 		},
-		...mapMutations('images', ['pushPath']),
 		...mapActions('images', ['loadImages', 'resetImages']),
+	},
+	watch: {
+		path() {
+			this.resetImages()
+		}
 	},
 	mounted() {
 		this.loadImages()
@@ -50,7 +61,7 @@ export default {
 }
 
 .v-card--reveal {
-	align-items: center;
+  align-items: center;
   opacity: .5;
   bottom: 0;
   position: absolute;

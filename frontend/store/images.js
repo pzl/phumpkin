@@ -7,7 +7,6 @@ export const state = () => ({
 	err: false,
 	sort: 'name',
 	sort_asc: true,
-	path: [],
 })
 
 export const mutations = {
@@ -18,9 +17,6 @@ export const mutations = {
 	addImages (state, images) { state.images.push(...images) },
 	setImages (state, images) { state.images = images },
 	setDirs (state, dirs) { state.dirs = dirs },
-	clearPath (state) { state.path = [] },
-	pushPath (state, dir) { state.path.push(dir) },
-	popPath (state) { state.path.pop() },
 	clearImages (state) { state.images = [] },
 	clearSelection (state) { state.selected = [] },
 	select (state, image) { state.selected.push(image) },
