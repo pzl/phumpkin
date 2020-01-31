@@ -129,13 +129,13 @@
 					</v-btn>
 				</template>
 				<v-list dense>
-					<v-list-item-group v-model="sort_by">
-						<v-list-item v-for="(sort, i) in sortables" :key="i" @click="sort_change(sort.text)">
+					<v-list-item-group v-model="sort">
+						<v-list-item v-for="(s, i) in sortables" :key="s.text">
 							<v-list-item-content>
-								<v-list-item-title v-text="sort.text"></v-list-item-title>
+								<v-list-item-title v-text="s.text"></v-list-item-title>
 							</v-list-item-content>
 							<v-list-item-icon>
-								<v-icon v-text="sort.icon"></v-icon>
+								<v-icon v-text="s.icon"></v-icon>
 							</v-list-item-icon>
 						</v-list-item>
 					</v-list-item-group>
@@ -218,12 +218,6 @@ export default {
 				{ text: 'Places', icon: 'mdi-map-marker', page: '/map' },
 			],
 			infobar_vis: false,
-			sortables: [
-				{ text: 'Rating', icon: 'mdi-star-half' },
-				{ text: 'Date Taken', icon: 'mdi-calendar-clock' },
-				{ text: 'Name', icon: 'mdi-sort-alphabetical' },
-			],
-			sort_by: 0,
 			show_search: false,
 			scrolled: false,
 			toast: {
@@ -243,11 +237,17 @@ export default {
 		anySelected() { return !!this.$store.state.images.selected.length },
 		navCollapsed() { return this.scrolled && !this.anySelected },
 		infoCollapsed() { return this.infobar_vis && this.anySelected },
-		selected_image() {
-			return this.selected.map(i => this.images[i])
-		},
+		selected_image() { return this.selected.map(i => this.images[i]) },
 		bg() { return (this.$vuetify.theme.dark) ? '#424242' : '#fafafa' },
-		...mapState('images', ['images','selected','sort','sort_asc']),
+		sort: {
+			get() {
+				return this.$store.state.images.sort
+			},
+			set(val) {
+				this.sortBy(val)
+			}
+		},
+		...mapState('images', ['images','selected','sort_asc', 'sortables']),
 		...mapState('socket',['connected']),
 		...mapState('interface', ['display_scale', 'layers', 'active_layers']),
 	},
@@ -260,10 +260,6 @@ export default {
 			this.scrolled = top > 0
 		},
 		reconnect() { this.$sock.reconnect() },
-		sort_change(v) {
-			this.sortBy(v)
-			this.resetImages()
-		},
 		flipSortDir() {
 			this.sortDir(!this.sort_asc)
 			this.resetImages()

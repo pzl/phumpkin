@@ -5,7 +5,12 @@ export const state = () => ({
 	loading: false,
 	loadMore: true,
 	err: false,
-	sort: 'name',
+	sortables: [
+		{ text: 'Rating', icon: 'mdi-star-half' },
+		{ text: 'Date Taken', icon: 'mdi-calendar-clock' },
+		{ text: 'Name', icon: 'mdi-sort-alphabetical' },
+	],
+	sort: 2,
 	sort_asc: true,
 })
 
@@ -48,7 +53,7 @@ export const actions = {
 					params: {
 						offset: state.images.length,
 						count: 10,
-						sort: state.sort,
+						sort: state.sortables[state.sort].text,
 						sort_dir: state.sort_asc ? 'asc' : 'desc',
 						path: state.path.join('/'),
 					}
