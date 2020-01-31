@@ -290,3 +290,60 @@ func HasFace(ctx context.Context) ([]Photo, error) {
 
 	return ps, nil
 }
+
+func ByRating(ctx context.Context, ratings []string) ([]Photo, error) {
+	log := logger.LogFromCtx(ctx)
+	db := ctx.Value("badger").(*badger.DB)
+	photoDir := ctx.Value("photoDir").(string)
+
+	rmap := make(map[string]struct{}, len(ratings))
+	for _, l := range ratings {
+		rmap[l] = struct{}{}
+	}
+
+	pmap := make(map[string]struct{})
+	pfx := []byte{indexRecord, SourceXMP, 'r', 'a', 't', 'i', 'n', 'g', 0} // @ todo: this is not checking EXIF
+	opts := badger.DefaultIteratorOptions
+	opts.PrefetchValues = false
+	opts.Prefix = pfx
+	err := db.View(func(tx *badger.Txn) error {
+		it := tx.NewIterator(opts)
+		defer it.Close()
+		it.Rewind()
+		for it.Seek(pfx); it.ValidForPrefix(pfx); it.Next() {
+			k := it.Item().Key()
+
+			vstart := bytes.IndexByte(k, 0)
+			if vstart == -1 {
+				continue
+			}
+
+			vend := bytes.LastIndexByte(k, 0)
+			if vend == -1 {
+				continue
+			}
+
+			v := string(k[vstart+1 : vend])
+			if _, ok := rmap[v]; ok {
+				fname := string(k[vend+1:])
+				pmap[fname] = struct{}{}
+			}
+		}
+		return nil
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	ps := make([]Photo, 0, len(pmap))
+	for k := range pmap {
+		p, err := FromSrc(ctx, photoDir+"/"+k)
+		if err != nil {
+			log.WithError(err).Error("error converting index result to photo")
+			continue
+		}
+		ps = append(ps, p)
+	}
+
+	return ps, nil
+}

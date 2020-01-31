@@ -214,6 +214,7 @@ export default {
 				{ text: 'Folder', icon: 'mdi-folder-multiple-image', page: '/' },
 				{ text: 'Tags', icon: 'mdi-tag', page: '/tags' },
 				{ text: 'Labels', icon: 'mdi-palette', page: '/labels' },
+				{ text: 'Rating', icon: 'mdi-star-half', page: '/rating' },
 				{ text: 'Faces', icon: 'mdi-face', page: '/faces' },
 				{ text: 'Places', icon: 'mdi-map-marker', page: '/map' },
 			],

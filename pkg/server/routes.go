@@ -86,6 +86,7 @@ func (s *server) Queries() http.Handler {
 	r.Get("/labels", QueryColorLabels)
 	r.Get("/tags", QueryTags)
 	r.Get("/faces", QueryFaces)
+	r.Get("/rating", QueryRating)
 
 	return r
 }
