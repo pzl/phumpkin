@@ -539,7 +539,7 @@ func (p *Photo) loadXmp() error {
 		loader = p.loadXMPFromDB
 	}
 	m, err := loader()
-	if err != nil {
+	if err != nil && !os.IsNotExist(err) {
 		return err
 	}
 	p.xmp = m
