@@ -36,7 +36,11 @@ export default {
 		onDirClick(dir, e) {
 			e.preventDefault()
 			this.pushPath(dir)
+			this.setDirs([])
+			this.resetImages()
+			this.loadImages(this.url)
 		},
+		...mapMutations('images', ['setDirs']),
 		...mapActions('images', ['loadImages', 'resetImages']),
 	},
 	watch: {
