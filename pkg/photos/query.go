@@ -3,10 +3,12 @@ package photos
 import (
 	"bytes"
 	"context"
+	"path/filepath"
 	"sort"
 
 	"github.com/dgraph-io/badger"
 	"github.com/pzl/mstk/logger"
+	"github.com/sahilm/fuzzy"
 )
 
 func GetFields(ctx context.Context, source byte, partial string) ([]string, error) {
@@ -88,6 +90,70 @@ func GetValues(ctx context.Context, source byte, field string, partial string) (
 	sort.Strings(values)
 
 	return values, nil
+}
+
+type SearchResults struct {
+	Total   int            `json:"total"`
+	Results []SearchResult `json:"results"`
+}
+
+type SearchResult struct {
+	Score   int    `json:"score"`
+	Matches []int  `json:"matches"`
+	Str     string `json:"str"`
+	Photo   Photo  `json:"photo"`
+}
+
+func GetNames(ctx context.Context, partial string) (SearchResults, error) {
+	db := ctx.Value("badger").(*badger.DB)
+	photoDir := ctx.Value("photoDir").(string)
+
+	files := make([]string, 0, 1000)
+	pfx := []byte{primaryRecord, SourceEXIF, DataRecord}
+	opts := badger.DefaultIteratorOptions
+	opts.PrefetchValues = false
+	opts.Prefix = pfx
+	err := db.View(func(tx *badger.Txn) error {
+		it := tx.NewIterator(opts)
+		defer it.Close()
+		it.Rewind()
+		for it.Seek(pfx); it.ValidForPrefix(pfx); it.Next() {
+
+			k := it.Item().Key()
+
+			file := string(k[3:])
+			files = append(files, file)
+		}
+
+		return nil
+	})
+	if err != nil {
+		return SearchResults{}, err
+	}
+
+	matches := fuzzy.Find(partial, files)
+
+	page := min(len(matches), 4)
+	results := SearchResults{
+		Total:   len(matches),
+		Results: make([]SearchResult, page),
+	}
+
+	for i := 0; i < page; i++ {
+		results.Results[i] = SearchResult{
+			Score:   matches[i].Score,
+			Matches: matches[i].MatchedIndexes,
+			Str:     matches[i].Str,
+		}
+
+		p, err := FromSrc(ctx, filepath.Join(photoDir, matches[i].Str))
+		if err != nil {
+			return SearchResults{}, err
+		}
+		results.Results[i].Photo = p
+	}
+
+	return results, nil
 }
 
 func WithLocation(ctx context.Context) ([]Photo, error) {
@@ -346,4 +412,10 @@ func ByRating(ctx context.Context, ratings []string) ([]Photo, error) {
 	}
 
 	return ps, nil
+}
+func min(a, b int) int {
+	if a < b {
+		return a
+	}
+	return b
 }

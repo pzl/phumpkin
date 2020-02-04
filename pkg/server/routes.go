@@ -76,6 +76,7 @@ func (s *server) Typeahead() http.Handler {
 		rs.Get("/field", AutoCompleteField)
 		rs.Get("/value", AutoCompleteValue)
 	})
+	r.Get("/name", AutoCompleteName)
 	return r
 }
 

@@ -56,6 +56,24 @@ func AutoCompleteValue(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
+func AutoCompleteName(w http.ResponseWriter, r *http.Request) {
+	name := strings.TrimSpace(r.URL.Query().Get("q"))
+	if name == "" {
+		writeJSON(w, r, map[string]interface{}{
+			"total":   0,
+			"results": []string{},
+		})
+		return
+	}
+
+	results, err := photos.GetNames(r.Context(), name)
+	if err != nil {
+		writeErr(w, 500, err)
+		return
+	}
+	writeJSON(w, r, results)
+}
+
 func QueryLocations(w http.ResponseWriter, r *http.Request) {
 	log := logger.GetLog(r)
 

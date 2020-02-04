@@ -63,6 +63,8 @@ github.com/pzl/mstk v0.0.0-20190908180923-0e4983063dd8/go.mod h1:YLORDLJbr1rYam6
 github.com/pzl/mstk v0.0.0-20200107022131-6ad83d2e8eb8 h1:Fhuj8B/EJz0/y9Ddw3g4z0eVrk++OghxBbwZw3MBH2A=
 github.com/pzl/mstk v0.0.0-20200107022131-6ad83d2e8eb8/go.mod h1:YLORDLJbr1rYam6NrJegicC2nC+FjHHSyTPWNWqxtac=
 github.com/russross/blackfriday v1.5.2/go.mod h1:JO/DiYxRf+HjHt06OyowR9PTA263kcR/rfWxYHBV53g=
+github.com/sahilm/fuzzy v0.1.0 h1:FzWGaw2Opqyu+794ZQ9SYifWv2EIXpwP4q8dY1kDAwI=
+github.com/sahilm/fuzzy v0.1.0/go.mod h1:VFvziUEIMCrT6A6tw2RFIXPXXmzXbOsSHF0DOI8ZK9Y=
 github.com/saracen/walker v0.0.0-20191201085201-324a081bae7e h1:NO86zOn5ScSKW8wRbMaSIcjDZUFpWdCQQnexRqZ9h9A=
 github.com/saracen/walker v0.0.0-20191201085201-324a081bae7e/go.mod h1:G0Z6yVPru183i2MuRJx1DcR4dgIZtLcTdaaE/pC1BJU=
 github.com/shurcooL/httpfs v0.0.0-20190707220628-8d4bc4ba7749 h1:bUGsEnyNbVPw06Bs80sCeARAlK8lhwqGyi6UT8ymuGk=

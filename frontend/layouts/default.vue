@@ -85,6 +85,7 @@
 				<size-select :x="size_menu.x" :y="size_menu.y" v-model="size_menu.show" :thumbs="selected_image.map(x=>x.thumbs)" />
 				<v-spacer />
 			</template>
+			<search ref="search" />
 			<!--
 			<v-btn icon v-if="navCollapsed">
 				<v-icon>mdi-tools</v-icon>
@@ -148,14 +149,6 @@
 			<v-btn icon title="Filter" disabled>
 				<v-icon>mdi-filter</v-icon>
 			</v-btn>
-
-			<div class="mb-n7 search-hider" :class="{ collapsed: !show_search }" >
-				<v-text-field rounded single-line clearable dense solo filled prepend-icon="mdi-magnify" @click:prepend="show_search = !show_search" disabled>
-					<template v-slot:label>
-						Find images <v-icon style="vertical-align: middle;">mdi-magnify</v-icon>
-					</template>
-				</v-text-field>
-			</div>
 			<v-btn icon title="Upload" disabled>
 				<v-icon>mdi-upload</v-icon>
 			</v-btn>
@@ -201,6 +194,7 @@ import Viewer from '~/components/viewer'
 import DetailCard from '~/components/info/detailCard'
 import ShotList from '~/components/info/shotList'
 import SizeSelect from '~/components/sizeSelect'
+import Search from '~/components/search'
 import { mapState, mapMutations, mapActions } from 'vuex'
 
 export default {
@@ -219,7 +213,6 @@ export default {
 				{ text: 'Places', icon: 'mdi-map-marker', page: '/map' },
 			],
 			infobar_vis: false,
-			show_search: false,
 			scrolled: false,
 			toast: {
 				show: false,
@@ -280,6 +273,10 @@ export default {
 			})
 		},
 		keyHandler(ev) {
+			if (this.$refs.search.focused) { // don't trigger if typing in search box
+				return
+			}
+
 			if (!this.lightbox && ev.keyCode === 86 && this.anySelected && !ev.ctrlKey && !ev.shiftKey && !ev.altKey && !ev.metaKey) { // v == view selected
 				ev.preventDefault()
 				this.lightbox = true
@@ -313,19 +310,6 @@ export default {
 	destroyed() {
 		window.removeEventListener('keydown', this.keyHandler)
 	},
-	components: { scrollUp, Rating, Tags, DetailCard, ShotList, Viewer, SizeSelect }
+	components: { scrollUp, Rating, Tags, DetailCard, ShotList, Viewer, SizeSelect, Search }
 }
 </script>
-
-
-<style>
-
-.search-hider.collapsed {
-	width: 2%;
-}
-
-.search-hider.collapsed .v-input__slot {
-	padding: 0;
-}
-
-</style>
