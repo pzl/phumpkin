@@ -280,11 +280,13 @@ export default {
 			})
 		},
 		keyHandler(ev) {
-			if (!this.lightbox && ev.keyCode === 86 && this.anySelected) {
+			if (!this.lightbox && ev.keyCode === 86 && this.anySelected && !ev.ctrlKey && !ev.shiftKey && !ev.altKey && !ev.metaKey) { // v == view selected
+				ev.preventDefault()
 				this.lightbox = true
 				return
 			}
-			if (ev.keyCode === 73 && this.anySelected) {
+			if (ev.keyCode === 73 && this.anySelected && !ev.ctrlKey && !ev.shiftKey && !ev.altKey && !ev.metaKey) { // i == info on selected
+				ev.preventDefault()
 				this.infobar_vis = !this.infobar_vis
 				return
 			}
