@@ -18,7 +18,7 @@ frontend/node_modules: frontend/package.json frontend/package-lock.json
 	cd frontend && npm install
 
 container:
-	sudo etc/build-container.sh
+	buildah unshare etc/build-container.sh
 
 clean:
 	$(RM) -rf bin frontend/dist

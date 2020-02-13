@@ -39,7 +39,7 @@ cp go.mod go.sum $bcmt/app
 
 echo "[i] compiling code"
 mkdir -p $bcmt/app/bin
-buildah run -- $bc sh -c 'cd /app && go build -o bin ./cmd/...'
+buildah run -- $bc sh -c 'cd /app && /usr/local/go/bin/go build -o bin ./cmd/...'
 
 
 
